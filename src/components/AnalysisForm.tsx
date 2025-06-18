@@ -5,39 +5,22 @@ import { Search, Upload, AlertTriangle, CheckCircle, XCircle } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import CategorySelector from './CategorySelector';
 import FileUploader from './FileUploader';
 import ResultCard from './ResultCard';
+import { useScamAnalysis } from '@/hooks/useScamAnalysis';
 
 const AnalysisForm = ({ onResult }) => {
   const [input, setInput] = useState('');
   const [category, setCategory] = useState('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [result, setResult] = useState(null);
   const [files, setFiles] = useState([]);
+  const { analyzeContent, isAnalyzing, result } = useScamAnalysis();
 
   const handleAnalyze = async () => {
-    if (!input.trim()) return;
-    
-    setIsAnalyzing(true);
-    
-    // Simulate API call with realistic delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock result based on input content
-    const mockResult = {
-      isSafe: Math.random() > 0.6,
-      confidence: Math.floor(Math.random() * 30) + 70,
-      category: category || 'General',
-      threats: Math.random() > 0.5 ? ['Phishing', 'Malware'] : [],
-      analysis: 'AI analysis completed using advanced pattern recognition.',
-      timestamp: new Date().toISOString()
-    };
-    
-    setResult(mockResult);
-    setIsAnalyzing(false);
-    onResult(mockResult);
+    const analysisResult = await analyzeContent(input, category);
+    if (analysisResult && onResult) {
+      onResult(analysisResult);
+    }
   };
 
   return (
