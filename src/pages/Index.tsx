@@ -1,9 +1,11 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Header from '@/components/Header';
 import HeroSection from '@/components/HeroSection';
 import AnalysisForm from '@/components/AnalysisForm';
+import ScamSubmissionForm from '@/components/ScamSubmissionForm';
 import TrendingScams from '@/components/TrendingScams';
 import ScamHeatmap from '@/components/ScamHeatmap';
 import Footer from '@/components/Footer';
@@ -31,7 +33,32 @@ const Index = () => {
           <HeroSection />
           
           <div className="container mx-auto px-4 py-12 space-y-16">
-            <AnalysisForm onResult={setAnalysisResult} />
+            <section className="max-w-4xl mx-auto">
+              <Tabs defaultValue="analyze" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-800/50 border-slate-700">
+                  <TabsTrigger 
+                    value="analyze" 
+                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-300"
+                  >
+                    Analyze Content
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="submit" 
+                    className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-300"
+                  >
+                    Report New Scam
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="analyze" className="mt-6">
+                  <AnalysisForm onResult={setAnalysisResult} />
+                </TabsContent>
+                
+                <TabsContent value="submit" className="mt-6">
+                  <ScamSubmissionForm />
+                </TabsContent>
+              </Tabs>
+            </section>
             
             <motion.div
               initial={{ opacity: 0, y: 50 }}
