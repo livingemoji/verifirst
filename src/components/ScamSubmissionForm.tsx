@@ -28,17 +28,28 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
   const { submitScamReport, isSubmitting } = useScamSubmission();
 
   const categories = [
-    { value: 'phishing', label: 'Phishing' },
-    { value: 'crypto', label: 'Cryptocurrency' },
-    { value: 'employment', label: 'Employment' },
-    { value: 'romance', label: 'Romance' },
-    { value: 'tech-support', label: 'Tech Support' },
-    { value: 'investment', label: 'Investment' },
-    { value: 'shopping', label: 'Shopping' },
-    { value: 'social-media', label: 'Social Media' },
-    { value: 'government', label: 'Government' },
+    { value: 'mpesa-fraud', label: 'M-Pesa Fraud' },
+    { value: 'mobile-money', label: 'Mobile Money Scams' },
+    { value: 'fake-jobs', label: 'Fake Job Offers' },
+    { value: 'pyramid-schemes', label: 'Pyramid Schemes' },
+    { value: 'fake-investments', label: 'Fake Investment Schemes' },
+    { value: 'loan-scams', label: 'Loan App Scams' },
+    { value: 'sim-swap', label: 'SIM Swap Fraud' },
+    { value: 'romance', label: 'Romance Scams' },
+    { value: 'fake-goods', label: 'Fake Goods/Services' },
+    { value: 'government-impersonation', label: 'Government Impersonation' },
     { value: 'other', label: 'Other' }
   ];
+
+  const kenyanCounties = [
+    'Nairobi', 'Mombasa', 'Kiambu', 'Nakuru', 'Machakos', 'Kajiado', 'Uasin Gishu',
+    'Kakamega', 'Meru', 'Kilifi', 'Murang\'a', 'Kisumu', 'Nyeri', 'Laikipia',
+    'Garissa', 'Kericho', 'Bomet', 'Kitui', 'Makueni', 'Nyandarua', 'Kirinyaga',
+    'Embu', 'Tharaka Nithi', 'Isiolo', 'Marsabit', 'Mandera', 'Wajir', 'West Pokot',
+    'Turkana', 'Samburu', 'Trans Nzoia', 'Bungoma', 'Busia', 'Vihiga', 'Siaya',
+    'Kisii', 'Nyamira', 'Migori', 'Homa Bay', 'Narok', 'Baringo', 'Elgeyo Marakwet',
+    'Nandi', 'Kwale', 'Taita Taveta', 'Lamu', 'Tana River'
+  ].sort();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -64,7 +75,7 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
       
       toast({
         title: "Report Submitted",
-        description: "Thank you for reporting this scam. It will help protect others.",
+        description: "Asante! Your report will help protect other Kenyans from scams.",
       });
 
       // Reset form
@@ -98,10 +109,10 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-white flex items-center gap-2">
             <AlertTriangle className="h-6 w-6 text-orange-500" />
-            Report a New Scam
+            Report a New Scam in Kenya
           </CardTitle>
           <p className="text-slate-300">
-            Help protect others by reporting scams that aren't in our database yet.
+            Help protect fellow Kenyans by reporting scams that aren't in our database yet.
           </p>
         </CardHeader>
         <CardContent>
@@ -156,16 +167,20 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
             <div className="space-y-2">
               <Label htmlFor="location" className="text-slate-300 flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Location (Optional)
+                County (Optional)
               </Label>
-              <Input
-                id="location"
-                type="text"
-                placeholder="City, State, Country where this scam was encountered"
-                value={formData.location}
-                onChange={(e) => handleInputChange('location', e.target.value)}
-                className="bg-slate-900/50 border-slate-600 text-white placeholder-slate-400 focus:border-purple-500"
-              />
+              <Select value={formData.location} onValueChange={(value) => handleInputChange('location', value)}>
+                <SelectTrigger className="bg-slate-900/50 border-slate-600 text-white focus:border-purple-500">
+                  <SelectValue placeholder="Select county where this scam was encountered" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600 max-h-48">
+                  {kenyanCounties.map((county) => (
+                    <SelectItem key={county} value={county} className="text-white hover:bg-slate-700">
+                      {county}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
