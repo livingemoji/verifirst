@@ -1,24 +1,12 @@
-# Welcome to your Lovable project
+# VerifyFirst Scam Shield
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/a1190b0f-2cfa-45e6-b402-5a26502f36f4
+**URL**: [Your Project URL Here]
 
 ## How can I edit this code?
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/a1190b0f-2cfa-45e6-b402-5a26502f36f4) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+You can work locally using your own IDE. The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
 Follow these steps:
 
@@ -59,15 +47,30 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Supabase (Edge Functions, Storage, Database)
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/a1190b0f-2cfa-45e6-b402-5a26502f36f4) and click on Share -> Publish.
+1. **Push Database Migrations**
+   ```bash
+   supabase db push
+   ```
+2. **Deploy Edge Functions**
+   ```bash
+   supabase functions deploy batch-analyze
+   supabase functions deploy analyze-scam
+   supabase functions deploy submit-scam-report
+   supabase functions deploy trending-scams
+   supabase functions deploy vote
+   ```
+3. **Deploy Frontend**
+   - Push your code to your main branch and trigger a deployment (Vercel, Netlify, etc.)
+   - Ensure your environment variables (Supabase URL, anon key, etc.) are set in your deployment environment.
 
-## Can I connect a custom domain to my Lovable project?
+## Custom Domain
 
-Yes, you can!
+To connect a custom domain, follow your deployment platform's instructions for domain management.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## API & Usage
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+See [docs/API_USAGE.md](docs/API_USAGE.md) for full API documentation, batch processing, and best practices.
