@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -18,7 +17,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Get recent scam reports with category info from Kenya
+    // Get recent scam reports with category info
     const { data: scamReports, error } = await supabase
       .from('scam_reports')
       .select(`
@@ -39,7 +38,7 @@ serve(async (req) => {
       console.error('Database error:', error)
     }
 
-    // Get user submitted scams from Kenya for additional data
+    // Get user submitted scams for additional data
     const { data: userSubmittedScams } = await supabase
       .from('user_submitted_scams')
       .select(`
@@ -54,6 +53,64 @@ serve(async (req) => {
       .order('created_at', { ascending: false })
       .limit(5)
 
+    // Get real category trends from database
+    const { data: categoryStats } = await supabase
+      .from('scam_reports')
+      .select(`
+        categories (name, icon),
+        created_at
+      `)
+      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
+
+    // Calculate category trends
+    const categoryCounts = {}
+    const categoryIcons = {}
+    
+    if (categoryStats) {
+      categoryStats.forEach(stat => {
+        const categoryName = stat.categories?.name || 'other'
+        const categoryIcon = stat.categories?.icon || '❓'
+        
+        categoryCounts[categoryName] = (categoryCounts[categoryName] || 0) + 1
+        categoryIcons[categoryName] = categoryIcon
+      })
+    }
+
+    // Get previous week for comparison
+    const { data: previousWeekStats } = await supabase
+      .from('scam_reports')
+      .select(`
+        categories (name),
+        created_at
+      `)
+      .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // 14 days ago
+      .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // 7 days ago
+
+    const previousWeekCounts = {}
+    if (previousWeekStats) {
+      previousWeekStats.forEach(stat => {
+        const categoryName = stat.categories?.name || 'other'
+        previousWeekCounts[categoryName] = (previousWeekCounts[categoryName] || 0) + 1
+      })
+    }
+
+    // Calculate changes and format category trends
+    const categoryTrends = Object.keys(categoryCounts).map(category => {
+      const currentCount = categoryCounts[category]
+      const previousCount = previousWeekCounts[category] || 0
+      const change = previousCount > 0 ? Math.round(((currentCount - previousCount) / previousCount) * 100) : 100
+      
+      return {
+        category: category.charAt(0).toUpperCase() + category.slice(1),
+        count: currentCount,
+        change: change,
+        icon: categoryIcons[category] || '❓'
+      }
+    }).sort((a, b) => b.count - a.count).slice(0, 6)
+
+    // Get content statistics
+    const { data: contentStats } = await supabase.rpc('get_content_statistics')
+
     const trendingData = {
       recentScams: [
         // Map actual scam reports
@@ -63,7 +120,7 @@ serve(async (req) => {
           category: report.categories?.name || 'other',
           icon: report.categories?.icon || '❓',
           confidence: report.confidence,
-          threats: report.threats,
+          threats: report.threats || [],
           createdAt: report.created_at
         })) || []),
         
@@ -79,15 +136,16 @@ serve(async (req) => {
         })) || [])
       ].slice(0, 10),
       
-      // Kenya-specific trending categories
-      categoryTrends: [
-        { category: 'Mobile Money', count: 234, change: 18, icon: '📱' },
-        { category: 'Employment', count: 156, change: 12, icon: '💼' },
-        { category: 'Investment', count: 89, change: -5, icon: '📈' },
-        { category: 'Romance', count: 67, change: 23, icon: '💕' },
-        { category: 'Cryptocurrency', count: 45, change: 8, icon: '₿' },
-        { category: 'Government', count: 34, change: -2, icon: '🏛️' }
-      ]
+      categoryTrends: categoryTrends,
+      
+      statistics: {
+        totalReports: contentStats?.[0]?.total_entries || 0,
+        safeCount: contentStats?.[0]?.safe_count || 0,
+        scamCount: contentStats?.[0]?.scam_count || 0,
+        highConfidence: contentStats?.[0]?.high_confidence_count || 0,
+        mediumConfidence: contentStats?.[0]?.medium_confidence_count || 0,
+        lowConfidence: contentStats?.[0]?.low_confidence_count || 0
+      }
     }
 
     return new Response(
@@ -100,14 +158,15 @@ serve(async (req) => {
       JSON.stringify({ 
         error: 'Internal server error',
         recentScams: [],
-        categoryTrends: [
-          { category: 'Mobile Money', count: 234, change: 18, icon: '📱' },
-          { category: 'Employment', count: 156, change: 12, icon: '💼' },
-          { category: 'Investment', count: 89, change: -5, icon: '📈' },
-          { category: 'Romance', count: 67, change: 23, icon: '💕' },
-          { category: 'Cryptocurrency', count: 45, change: 8, icon: '₿' },
-          { category: 'Government', count: 34, change: -2, icon: '🏛️' }
-        ]
+        categoryTrends: [],
+        statistics: {
+          totalReports: 0,
+          safeCount: 0,
+          scamCount: 0,
+          highConfidence: 0,
+          mediumConfidence: 0,
+          lowConfidence: 0
+        }
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, AlertTriangle, ThumbsUp, ThumbsDown, Share } from 'lucide-react';
@@ -8,9 +7,9 @@ import { Badge } from '@/components/ui/badge';
 
 const ResultCard = ({ result }) => {
   const getStatusIcon = () => {
-    if (result.isSafe) return <CheckCircle className="h-6 w-6 text-green-400" />;
-    if (result.confidence < 80) return <AlertTriangle className="h-6 w-6 text-yellow-400" />;
-    return <XCircle className="h-6 w-6 text-red-400" />;
+    if (result.isSafe) return <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />;
+    if (result.confidence < 80) return <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-400" />;
+    return <XCircle className="h-5 w-5 sm:h-6 sm:w-6 text-red-400" />;
   };
 
   const getStatusColor = () => {
@@ -32,25 +31,25 @@ const ResultCard = ({ result }) => {
       transition={{ duration: 0.6 }}
     >
       <Card className={`bg-gradient-to-r ${getStatusColor()} backdrop-blur-xl border`}>
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center space-x-3">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               {getStatusIcon()}
               <div>
-                <h3 className="text-xl font-bold text-white">{getStatusText()}</h3>
-                <p className="text-slate-300">Confidence: {result.confidence}%</p>
+                <h3 className="text-lg sm:text-xl font-bold text-white">{getStatusText()}</h3>
+                <p className="text-sm sm:text-base text-slate-300">Confidence: {result.confidence}%</p>
               </div>
             </div>
-            <Badge variant="secondary" className="bg-slate-700 text-slate-300">
+            <Badge variant="secondary" className="bg-slate-700 text-slate-300 text-xs sm:text-sm self-start">
               {result.category}
             </Badge>
           </div>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {result.threats.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-slate-300 mb-2">Detected Threats:</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1 sm:gap-2">
                   {result.threats.map((threat, index) => (
                     <Badge key={index} variant="destructive" className="text-xs">
                       {threat}
@@ -62,22 +61,22 @@ const ResultCard = ({ result }) => {
             
             <div>
               <p className="text-sm font-medium text-slate-300 mb-2">Analysis:</p>
-              <p className="text-slate-400 text-sm">{result.analysis}</p>
+              <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">{result.analysis}</p>
             </div>
             
-            <div className="flex items-center justify-between pt-4 border-t border-slate-700">
-              <div className="flex items-center space-x-2">
-                <Button variant="ghost" size="sm" className="text-slate-400 hover:text-green-400">
-                  <ThumbsUp className="h-4 w-4 mr-1" />
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 pt-3 sm:pt-4 border-t border-slate-700">
+              <div className="flex items-center justify-center sm:justify-start space-x-2">
+                <Button variant="ghost" size="sm" className="text-slate-400 hover:text-green-400 text-xs sm:text-sm">
+                  <ThumbsUp className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Helpful
                 </Button>
-                <Button variant="ghost" size="sm" className="text-slate-400 hover:text-red-400">
-                  <ThumbsDown className="h-4 w-4 mr-1" />
+                <Button variant="ghost" size="sm" className="text-slate-400 hover:text-red-400 text-xs sm:text-sm">
+                  <ThumbsDown className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Not Helpful
                 </Button>
               </div>
-              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-purple-400">
-                <Share className="h-4 w-4 mr-1" />
+              <Button variant="ghost" size="sm" className="text-slate-400 hover:text-purple-400 text-xs sm:text-sm">
+                <Share className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                 Share
               </Button>
             </div>

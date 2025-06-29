@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # VerifyFirst Scam Shield
 
 ## Project info
@@ -74,3 +75,7 @@ To connect a custom domain, follow your deployment platform's instructions for d
 ## API & Usage
 
 See [docs/API_USAGE.md](docs/API_USAGE.md) for full API documentation, batch processing, and best practices.
+=======
+# verifirst
+web to view and verify scams
+>>>>>>> da8405b3b0da3f580faa58e82003b6318b042c93

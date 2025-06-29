@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,18 +22,18 @@ const CategorySelector = ({ value, onChange }) => {
         Scam Category (Optional)
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="bg-slate-900/50 border-slate-600 text-white focus:border-purple-500 focus:ring-purple-500/20">
+        <SelectTrigger className="bg-slate-900/50 border-slate-600 text-white focus:border-purple-500 focus:ring-purple-500/20 text-sm sm:text-base h-10 sm:h-11">
           <SelectValue placeholder="Select category for better analysis" />
         </SelectTrigger>
-        <SelectContent className="bg-slate-800 border-slate-700">
+        <SelectContent className="bg-slate-800 border-slate-700 max-h-60">
           {categories.map((category) => (
             <SelectItem
               key={category.value}
               value={category.value}
-              className="text-white hover:bg-slate-700 focus:bg-slate-700"
+              className="text-white hover:bg-slate-700 focus:bg-slate-700 text-sm sm:text-base"
             >
               <div className="flex items-center space-x-2">
-                <span>{category.icon}</span>
+                <span className="text-base sm:text-lg">{category.icon}</span>
                 <span>{category.label}</span>
               </div>
             </SelectItem>

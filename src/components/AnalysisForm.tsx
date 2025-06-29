@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Upload, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
@@ -24,22 +23,22 @@ const AnalysisForm = ({ onResult }) => {
   };
 
   return (
-    <section id="analyze" className="max-w-4xl mx-auto">
+    <section id="analyze" className="max-w-4xl mx-auto px-4">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
         <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-xl">
-          <CardContent className="p-8">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-white mb-4">Analyze Potential Scam</h2>
-              <p className="text-slate-300">
+          <CardContent className="p-4 sm:p-6 md:p-8">
+            <div className="text-center mb-6 sm:mb-8">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">Analyze Potential Scam</h2>
+              <p className="text-sm sm:text-base text-slate-300 px-2">
                 Enter a URL, message, or email to check if it's legitimate or a scam
               </p>
             </div>
             
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   Content to Analyze
@@ -48,7 +47,7 @@ const AnalysisForm = ({ onResult }) => {
                   placeholder="Paste URL, email content, or suspicious message here..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="min-h-32 bg-slate-900/50 border-slate-600 text-white placeholder-slate-400 focus:border-purple-500 focus:ring-purple-500/20"
+                  className="min-h-24 sm:min-h-32 bg-slate-900/50 border-slate-600 text-white placeholder-slate-400 focus:border-purple-500 focus:ring-purple-500/20 text-sm sm:text-base"
                 />
               </div>
               
@@ -63,7 +62,7 @@ const AnalysisForm = ({ onResult }) => {
                 <Button
                   onClick={handleAnalyze}
                   disabled={!input.trim() || isAnalyzing}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 text-lg font-medium transition-all duration-200"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-2 sm:py-3 text-base sm:text-lg font-medium transition-all duration-200"
                 >
                   {isAnalyzing ? (
                     <motion.div
@@ -71,12 +70,12 @@ const AnalysisForm = ({ onResult }) => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                     >
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       <span>Analyzing...</span>
                     </motion.div>
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <Search className="h-5 w-5" />
+                      <Search className="h-4 w-4 sm:h-5 sm:w-5" />
                       <span>Analyze Now</span>
                     </div>
                   )}
@@ -93,7 +92,7 @@ const AnalysisForm = ({ onResult }) => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               transition={{ duration: 0.5 }}
-              className="mt-6"
+              className="mt-4 sm:mt-6"
             >
               <ResultCard result={result} />
             </motion.div>

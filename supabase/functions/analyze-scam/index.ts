@@ -111,16 +111,91 @@ serve(async (req) => {
       )
     }
 
-    // Record cache miss metric
-    await supabase.rpc('record_performance_metric', {
-      p_metric_name: 'cache_miss',
-      p_metric_value: 1,
-      p_tags: { endpoint: 'analyze-scam', category: category || 'unknown' }
+    // SEARCH DATABASE FIRST
+    console.log('Searching database for existing analysis...')
+    const { data: dbResults, error: dbError } = await supabase.rpc('search_content', {
+      search_query: content,
+      content_type_filter: null
     })
 
-    // Analyze with AI
-    const analysis = await analyzeWithAI(content, category)
-    
+    if (dbError) {
+      console.error('Database search error:', dbError)
+    }
+
+    let analysis = null
+    let source = 'api'
+    let dbMatch = null
+
+    // If we found matches in the database, use the best match
+    if (dbResults && dbResults.length > 0) {
+      // Sort by confidence and recency
+      const sortedResults = dbResults.sort((a, b) => {
+        if (a.confidence !== b.confidence) {
+          return b.confidence - a.confidence
+        }
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+
+      dbMatch = sortedResults[0]
+      
+      // If we have a high-confidence match (>= 70%), use it
+      if (dbMatch.confidence >= 70) {
+        console.log('Using high-confidence database match:', dbMatch.confidence + '%')
+        
+        // Get full details from scam_reports or user_submitted_scams
+        if (dbMatch.source_type === 'scam_report') {
+          const { data: scamReport } = await supabase
+            .from('scam_reports')
+            .select('*')
+            .eq('id', dbMatch.source_id)
+            .single()
+          
+          if (scamReport) {
+            analysis = {
+              isSafe: scamReport.is_safe,
+              confidence: scamReport.confidence,
+              threats: scamReport.threats || [],
+              analysis: scamReport.analysis,
+              category: category || 'unknown'
+            }
+            source = 'database'
+          }
+        } else if (dbMatch.source_type === 'user_submitted') {
+          const { data: userSubmitted } = await supabase
+            .from('user_submitted_scams')
+            .select('*')
+            .eq('id', dbMatch.source_id)
+            .single()
+          
+          if (userSubmitted) {
+            analysis = {
+              isSafe: false, // User submissions are typically scams
+              confidence: 75, // Default confidence for user submissions
+              threats: ['User reported scam'],
+              analysis: `This content was reported as a scam by a community member: ${userSubmitted.description}`,
+              category: category || 'user_reported'
+            }
+            source = 'database'
+          }
+        }
+      }
+    }
+
+    // If no good database match, use AI analysis
+    if (!analysis) {
+      console.log('No high-confidence database match found, using AI analysis...')
+      
+      // Record cache miss metric
+      await supabase.rpc('record_performance_metric', {
+        p_metric_name: 'cache_miss',
+        p_metric_value: 1,
+        p_tags: { endpoint: 'analyze-scam', category: category || 'unknown' }
+      })
+
+      analysis = await analyzeWithAI(content, category)
+      source = 'api'
+    }
+
     // Cache the result with TTL
     await supabase
       .from('analysis_cache')
@@ -132,8 +207,8 @@ serve(async (req) => {
       .onConflict('content_hash')
       .merge()
 
-    // Store in scam_reports if user is authenticated
-    if (userId) {
+    // Store in scam_reports if user is authenticated and result came from API
+    if (userId && source === 'api') {
       const { data: categoryData } = await supabase
         .from('categories')
         .select('id')
@@ -161,7 +236,8 @@ serve(async (req) => {
         endpoint: 'analyze-scam', 
         category: category || 'unknown',
         is_safe: analysis.isSafe,
-        confidence_level: analysis.confidence > 80 ? 'high' : analysis.confidence > 60 ? 'medium' : 'low'
+        confidence_level: analysis.confidence > 80 ? 'high' : analysis.confidence > 60 ? 'medium' : 'low',
+        source: source
       }
     })
 
@@ -169,6 +245,12 @@ serve(async (req) => {
       JSON.stringify({
         ...analysis,
         cached: false,
+        source: source,
+        db_match: dbMatch ? {
+          confidence: dbMatch.confidence,
+          threat_level: dbMatch.threat_level,
+          source_type: dbMatch.source_type
+        } : null,
         content_length: content.length,
         processing_time: Date.now() - new Date().getTime()
       }),

@@ -8,8 +8,6 @@ import ScamSubmissionForm from '@/components/ScamSubmissionForm';
 import BatchUploadForm from '@/components/BatchUploadForm';
 import DomainAnalysis from '@/components/DomainAnalysis';
 import PerformanceMonitor from '@/components/PerformanceMonitor';
-import TrendingScams from '@/components/TrendingScams';
-import ScamHeatmap from '@/components/ScamHeatmap';
 import Footer from '@/components/Footer';
 
 const Index = () => {
@@ -45,7 +43,7 @@ const Index = () => {
             <div className="text-center">
               <button
                 onClick={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
-                className="inline-flex items-center px-4 py-2 bg-slate-800/50 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-700/50 transition-colors"
+                className="inline-flex items-center px-6 py-3 bg-slate-800/50 border border-slate-700 text-slate-300 rounded-lg hover:bg-slate-700/50 transition-colors shadow-lg"
               >
                 {showPerformanceMonitor ? 'Hide' : 'Show'} System Performance
               </button>
@@ -67,66 +65,74 @@ const Index = () => {
             
             <section className="max-w-6xl mx-auto">
               <Tabs defaultValue="analyze" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 bg-slate-800/50 border-slate-700">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 bg-slate-800/50 border-slate-700 gap-2 p-2">
                   <TabsTrigger 
                     value="analyze" 
-                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-300"
+                    className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-slate-300 rounded-lg"
                   >
                     Single Analysis
                   </TabsTrigger>
                   <TabsTrigger 
                     value="domain" 
-                    className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-slate-300"
+                    className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-slate-300 rounded-lg"
                   >
                     Domain Analysis
                   </TabsTrigger>
                   <TabsTrigger 
                     value="batch" 
-                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-300"
+                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-slate-300 rounded-lg"
                   >
                     Batch Processing
                   </TabsTrigger>
                   <TabsTrigger 
                     value="submit" 
-                    className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-300"
+                    className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-slate-300 rounded-lg"
                   >
                     Report New Scam
                   </TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="analyze" className="mt-6">
-                  <AnalysisForm onResult={setAnalysisResult} />
+                <TabsContent value="analyze" className="mt-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <AnalysisForm onResult={setAnalysisResult} />
+                  </motion.div>
                 </TabsContent>
                 
-                <TabsContent value="domain" className="mt-6">
-                  <DomainAnalysis />
+                <TabsContent value="domain" className="mt-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
+                  >
+                    <DomainAnalysis />
+                  </motion.div>
                 </TabsContent>
                 
-                <TabsContent value="batch" className="mt-6">
-                  <BatchUploadForm onComplete={handleBatchComplete} />
+                <TabsContent value="batch" className="mt-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <BatchUploadForm onComplete={handleBatchComplete} />
+                  </motion.div>
                 </TabsContent>
                 
-                <TabsContent value="submit" className="mt-6">
-                  <ScamSubmissionForm />
+                <TabsContent value="submit" className="mt-8">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
+                  >
+                    <ScamSubmissionForm />
+                  </motion.div>
                 </TabsContent>
               </Tabs>
             </section>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              <TrendingScams />
-            </motion.div>
-            
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            >
-              <ScamHeatmap />
-            </motion.div>
           </div>
         </main>
         
