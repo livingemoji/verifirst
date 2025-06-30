@@ -45,6 +45,9 @@ export const useScamAnalysis = () => {
     setIsAnalyzing(true);
     setResult(null);
 
+    let lastError: any = null;
+    let rateLimitHit = false;
+
     try {
       const analysisResult = await makeRequest(
         async () => {
@@ -61,9 +64,10 @@ export const useScamAnalysis = () => {
         },
         {
           onRateLimit: (retryAfter) => {
+            rateLimitHit = true;
             toast({
-              title: "Rate Limit Exceeded",
-              description: `Please wait ${Math.ceil(retryAfter / 1000)} seconds before trying again.`,
+              title: "Too Many Requests",
+              description: `You are sending requests too quickly. Please wait ${Math.ceil(retryAfter / 1000)} seconds before trying again.`,
               variant: "destructive"
             });
           },
@@ -74,7 +78,7 @@ export const useScamAnalysis = () => {
             });
           },
           onError: (error) => {
-            console.error('Analysis failed:', error);
+            lastError = error;
             toast({
               title: "Analysis Failed",
               description: error.message || "Failed to analyze content. Please try again.",
@@ -94,8 +98,20 @@ export const useScamAnalysis = () => {
       return result;
 
     } catch (error) {
-      console.error('Analysis failed:', error);
-      
+      lastError = error;
+      if (rateLimitHit) {
+        toast({
+          title: "Rate Limit Exceeded",
+          description: "You have reached the maximum number of requests allowed. Please wait a few minutes and try again.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Analysis Failed",
+          description: error.message || "Failed to analyze content. Please try again.",
+          variant: "destructive"
+        });
+      }
       // Fallback to mock result for development
       const mockResult: AnalysisResult = {
         isSafe: Math.random() > 0.5,
@@ -106,7 +122,6 @@ export const useScamAnalysis = () => {
         timestamp: new Date().toISOString(),
         cached: false
       };
-      
       setResult(mockResult);
       return mockResult;
     } finally {

@@ -12,163 +12,214 @@ serve(async (req) => {
   }
 
   try {
+    const { cache_key = 'weekly_trends' } = await req.json().catch(() => ({ cache_key: 'weekly_trends' }))
+    
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Get recent scam reports with category info
-    const { data: scamReports, error } = await supabase
-      .from('scam_reports')
-      .select(`
-        id,
-        content,
-        is_safe,
-        confidence,
-        threats,
-        analysis,
-        created_at,
-        categories (name, icon)
-      `)
-      .eq('is_safe', false)
-      .order('created_at', { ascending: false })
-      .limit(10)
+    // Check cache first (15 minutes TTL)
+    const { data: cachedData } = await supabase.rpc('get_trending_cache', {
+      cache_key: cache_key,
+      ttl_minutes: 15
+    })
 
-    if (error) {
-      console.error('Database error:', error)
+    if (cachedData) {
+      console.log('Returning cached trending data for:', cache_key)
+      return new Response(
+        JSON.stringify({
+          ...cachedData,
+          cached: true,
+          cache_key: cache_key
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Get user submitted scams for additional data
-    const { data: userSubmittedScams } = await supabase
-      .from('user_submitted_scams')
-      .select(`
-        id,
-        title,
-        description,
-        location,
-        created_at,
-        categories (name, icon)
-      `)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: false })
-      .limit(5)
-
-    // Get real category trends from database
-    const { data: categoryStats } = await supabase
-      .from('scam_reports')
-      .select(`
-        categories (name, icon),
-        created_at
-      `)
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
-
-    // Calculate category trends
-    const categoryCounts = {}
-    const categoryIcons = {}
+    console.log('Cache miss, generating fresh trending data for:', cache_key)
     
-    if (categoryStats) {
-      categoryStats.forEach(stat => {
-        const categoryName = stat.categories?.name || 'other'
-        const categoryIcon = stat.categories?.icon || '❓'
-        
-        categoryCounts[categoryName] = (categoryCounts[categoryName] || 0) + 1
-        categoryIcons[categoryName] = categoryIcon
-      })
+    let result = {}
+
+    switch (cache_key) {
+      case 'weekly_trends':
+        result = await getWeeklyTrends(supabase)
+        break
+      case 'daily_stats':
+        result = await getDailyStats(supabase)
+        break
+      case 'category_breakdown':
+        result = await getCategoryBreakdown(supabase)
+        break
+      case 'recent_activity':
+        result = await getRecentActivity(supabase)
+        break
+      default:
+        result = await getWeeklyTrends(supabase)
     }
 
-    // Get previous week for comparison
-    const { data: previousWeekStats } = await supabase
-      .from('scam_reports')
-      .select(`
-        categories (name),
-        created_at
-      `)
-      .gte('created_at', new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString()) // 14 days ago
-      .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // 7 days ago
-
-    const previousWeekCounts = {}
-    if (previousWeekStats) {
-      previousWeekStats.forEach(stat => {
-        const categoryName = stat.categories?.name || 'other'
-        previousWeekCounts[categoryName] = (previousWeekCounts[categoryName] || 0) + 1
-      })
-    }
-
-    // Calculate changes and format category trends
-    const categoryTrends = Object.keys(categoryCounts).map(category => {
-      const currentCount = categoryCounts[category]
-      const previousCount = previousWeekCounts[category] || 0
-      const change = previousCount > 0 ? Math.round(((currentCount - previousCount) / previousCount) * 100) : 100
-      
-      return {
-        category: category.charAt(0).toUpperCase() + category.slice(1),
-        count: currentCount,
-        change: change,
-        icon: categoryIcons[category] || '❓'
-      }
-    }).sort((a, b) => b.count - a.count).slice(0, 6)
-
-    // Get content statistics
-    const { data: contentStats } = await supabase.rpc('get_content_statistics')
-
-    const trendingData = {
-      recentScams: [
-        // Map actual scam reports
-        ...(scamReports?.map(report => ({
-          id: report.id,
-          title: report.content.substring(0, 100) + (report.content.length > 100 ? '...' : ''),
-          category: report.categories?.name || 'other',
-          icon: report.categories?.icon || '❓',
-          confidence: report.confidence,
-          threats: report.threats || [],
-          createdAt: report.created_at
-        })) || []),
-        
-        // Add user submitted scams
-        ...(userSubmittedScams?.map(scam => ({
-          id: scam.id,
-          title: scam.title,
-          category: scam.categories?.name || 'other',
-          icon: scam.categories?.icon || '❓',
-          confidence: 85, // Default confidence for user submissions
-          threats: ['User Reported'],
-          createdAt: scam.created_at
-        })) || [])
-      ].slice(0, 10),
-      
-      categoryTrends: categoryTrends,
-      
-      statistics: {
-        totalReports: contentStats?.[0]?.total_entries || 0,
-        safeCount: contentStats?.[0]?.safe_count || 0,
-        scamCount: contentStats?.[0]?.scam_count || 0,
-        highConfidence: contentStats?.[0]?.high_confidence_count || 0,
-        mediumConfidence: contentStats?.[0]?.medium_confidence_count || 0,
-        lowConfidence: contentStats?.[0]?.low_confidence_count || 0
-      }
-    }
+    // Cache the result
+    await supabase.rpc('set_trending_cache', {
+      cache_key: cache_key,
+      data: result,
+      ttl_minutes: 15
+    })
 
     return new Response(
-      JSON.stringify(trendingData),
+      JSON.stringify({
+        ...result,
+        cached: false,
+        cache_key: cache_key
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.error('Error:', error)
     return new Response(
-      JSON.stringify({ 
-        error: 'Internal server error',
-        recentScams: [],
-        categoryTrends: [],
-        statistics: {
-          totalReports: 0,
-          safeCount: 0,
-          scamCount: 0,
-          highConfidence: 0,
-          mediumConfidence: 0,
-          lowConfidence: 0
-        }
-      }),
+      JSON.stringify({ error: 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })
+
+async function getWeeklyTrends(supabase: any) {
+  const { data: weeklyScams } = await supabase
+    .from('scam_reports')
+    .select(`
+      id,
+      content,
+      is_safe,
+      confidence,
+      threats,
+      created_at,
+      categories(name, icon)
+    `)
+    .eq('is_safe', false)
+    .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  const { data: userSubmissions } = await supabase
+    .from('user_submitted_scams')
+    .select(`
+      id,
+      title,
+      description,
+      location,
+      status,
+      created_at,
+      categories(name, icon)
+    `)
+    .eq('status', 'approved')
+    .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  return {
+    weekly_scams: weeklyScams || [],
+    user_submissions: userSubmissions || [],
+    period: '7 days'
+  }
+}
+
+async function getDailyStats(supabase: any) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  const { data: dailyScams } = await supabase
+    .from('scam_reports')
+    .select('id, is_safe, confidence, created_at')
+    .gte('created_at', today.toISOString())
+
+  const { data: dailySubmissions } = await supabase
+    .from('user_submitted_scams')
+    .select('id, status, created_at')
+    .gte('created_at', today.toISOString())
+
+  const totalScams = dailyScams?.length || 0
+  const unsafeScams = dailyScams?.filter(s => !s.is_safe).length || 0
+  const avgConfidence = dailyScams?.length > 0 
+    ? dailyScams.reduce((sum, s) => sum + s.confidence, 0) / dailyScams.length 
+    : 0
+  const newSubmissions = dailySubmissions?.length || 0
+
+  return {
+    total_scams: totalScams,
+    unsafe_scams: unsafeScams,
+    safe_scams: totalScams - unsafeScams,
+    avg_confidence: Math.round(avgConfidence),
+    new_submissions: newSubmissions,
+    date: today.toISOString().split('T')[0]
+  }
+}
+
+async function getCategoryBreakdown(supabase: any) {
+  const { data: categoryStats } = await supabase
+    .from('scam_reports')
+    .select(`
+      categories(name, icon),
+      is_safe
+    `)
+    .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
+
+  const categoryMap = new Map()
+  
+  categoryStats?.forEach(stat => {
+    const categoryName = stat.categories?.name || 'unknown'
+    if (!categoryMap.has(categoryName)) {
+      categoryMap.set(categoryName, {
+        name: categoryName,
+        icon: stat.categories?.icon || '❓',
+        total: 0,
+        unsafe: 0,
+        safe: 0
+      })
+    }
+    
+    const category = categoryMap.get(categoryName)
+    category.total++
+    if (stat.is_safe) {
+      category.safe++
+    } else {
+      category.unsafe++
+    }
+  })
+
+  return {
+    categories: Array.from(categoryMap.values()).sort((a, b) => b.total - a.total),
+    period: '30 days'
+  }
+}
+
+async function getRecentActivity(supabase: any) {
+  const { data: recentScams } = await supabase
+    .from('scam_reports')
+    .select(`
+      id,
+      content,
+      is_safe,
+      confidence,
+      created_at,
+      categories(name, icon)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  const { data: recentSubmissions } = await supabase
+    .from('user_submitted_scams')
+    .select(`
+      id,
+      title,
+      status,
+      created_at,
+      categories(name, icon)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(5)
+
+  return {
+    recent_scams: recentScams || [],
+    recent_submissions: recentSubmissions || [],
+    last_updated: new Date().toISOString()
+  }
+}

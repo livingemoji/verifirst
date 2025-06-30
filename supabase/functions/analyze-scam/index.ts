@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { GoogleGenerativeAI } from "https://esm.sh/@google/generative-ai@0.1.3"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,11 +8,12 @@ const corsHeaders = {
 }
 
 // Configuration for rate limiting and performance
-const RATE_LIMIT_REQUESTS = 100 // requests per hour per IP/user
+const RATE_LIMIT_REQUESTS = 500 // requests per hour per IP/user
 const RATE_LIMIT_WINDOW = 60 // minutes
 const CACHE_TTL_HOURS = 24 // cache results for 24 hours
 const MAX_CONTENT_LENGTH = 10000 // max characters for analysis
 const BATCH_SIZE = 10 // process multiple requests in batch
+const CACHE_MIN_FREQUENCY = 3 // Only cache if same content seen 3+ times
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -76,41 +78,6 @@ serve(async (req) => {
       )
     }
 
-    // Create content hash for caching
-    const encoder = new TextEncoder()
-    const data = encoder.encode(content.toLowerCase().trim())
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
-    const contentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
-
-    // Check cache first with TTL
-    const { data: cached } = await supabase
-      .from('analysis_cache')
-      .select('result, created_at')
-      .eq('content_hash', contentHash)
-      .gte('created_at', new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString())
-      .single()
-
-    if (cached) {
-      console.log('Returning cached result')
-      
-      // Record cache hit metric
-      await supabase.rpc('record_performance_metric', {
-        p_metric_name: 'cache_hit',
-        p_metric_value: 1,
-        p_tags: { endpoint: 'analyze-scam', category: category || 'unknown' }
-      })
-
-      return new Response(
-        JSON.stringify({
-          ...cached.result,
-          cached: true,
-          cache_age: Math.floor((Date.now() - new Date(cached.created_at).getTime()) / 1000)
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
     // SEARCH DATABASE FIRST
     console.log('Searching database for existing analysis...')
     const { data: dbResults, error: dbError } = await supabase.rpc('search_content', {
@@ -120,13 +87,16 @@ serve(async (req) => {
 
     if (dbError) {
       console.error('Database search error:', dbError)
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to search database',
+          details: dbError.message
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    let analysis = null
-    let source = 'api'
-    let dbMatch = null
-
-    // If we found matches in the database, use the best match
+    // If we found matches in the database, return them
     if (dbResults && dbResults.length > 0) {
       // Sort by confidence and recency
       const sortedResults = dbResults.sort((a, b) => {
@@ -136,79 +106,48 @@ serve(async (req) => {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       })
 
-      dbMatch = sortedResults[0]
+      const bestMatch = sortedResults[0]
       
-      // If we have a high-confidence match (>= 70%), use it
-      if (dbMatch.confidence >= 70) {
-        console.log('Using high-confidence database match:', dbMatch.confidence + '%')
-        
-        // Get full details from scam_reports or user_submitted_scams
-        if (dbMatch.source_type === 'scam_report') {
-          const { data: scamReport } = await supabase
-            .from('scam_reports')
-            .select('*')
-            .eq('id', dbMatch.source_id)
-            .single()
-          
-          if (scamReport) {
-            analysis = {
-              isSafe: scamReport.is_safe,
-              confidence: scamReport.confidence,
-              threats: scamReport.threats || [],
-              analysis: scamReport.analysis,
-              category: category || 'unknown'
-            }
-            source = 'database'
-          }
-        } else if (dbMatch.source_type === 'user_submitted') {
-          const { data: userSubmitted } = await supabase
-            .from('user_submitted_scams')
-            .select('*')
-            .eq('id', dbMatch.source_id)
-            .single()
-          
-          if (userSubmitted) {
-            analysis = {
-              isSafe: false, // User submissions are typically scams
-              confidence: 75, // Default confidence for user submissions
-              threats: ['User reported scam'],
-              analysis: `This content was reported as a scam by a community member: ${userSubmitted.description}`,
-              category: category || 'user_reported'
-            }
-            source = 'database'
-          }
-        }
-      }
+      return new Response(
+        JSON.stringify({
+          ...bestMatch,
+          source: 'database',
+          similar_reports: sortedResults.length - 1,
+          message: sortedResults.length > 1 
+            ? `Found ${sortedResults.length} similar reports in our database.`
+            : 'Found a matching report in our database.'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // If no good database match, use AI analysis
-    if (!analysis) {
-      console.log('No high-confidence database match found, using AI analysis...')
-      
-      // Record cache miss metric
-      await supabase.rpc('record_performance_metric', {
-        p_metric_name: 'cache_miss',
-        p_metric_value: 1,
-        p_tags: { endpoint: 'analyze-scam', category: category || 'unknown' }
-      })
+    // No database matches found, check if it's a URL for Gemini analysis
+    const urlPattern = /https?:\/\/[^\s]+/
+    const isUrl = urlPattern.test(content)
 
+    let analysis
+    if (isUrl) {
+      analysis = await analyzeWithGemini(content)
+    } else {
       analysis = await analyzeWithAI(content, category)
-      source = 'api'
     }
 
-    // Cache the result with TTL
-    await supabase
-      .from('analysis_cache')
-      .insert({
-        content_hash: contentHash,
-        result: analysis,
-        created_at: new Date().toISOString()
-      })
-      .onConflict('content_hash')
-      .merge()
+    // Only cache if this content has been seen multiple times
+    const { data: contentFrequency } = await supabase.rpc('get_content_frequency', {
+      p_content: content
+    })
 
-    // Store in scam_reports if user is authenticated and result came from API
-    if (userId && source === 'api') {
+    if (contentFrequency && contentFrequency >= CACHE_MIN_FREQUENCY) {
+      await supabase.rpc('set_cached_analysis', {
+        content_hash: await generateContentHash(content),
+        result: analysis,
+        ttl_hours: CACHE_TTL_HOURS,
+        cache_type: 'analysis'
+      })
+    }
+
+    // Store in scam_reports
+    if (userId) {
       const { data: categoryData } = await supabase
         .from('categories')
         .select('id')
@@ -218,7 +157,7 @@ serve(async (req) => {
       await supabase
         .from('scam_reports')
         .insert({
-          content: content.substring(0, 1000), // Limit content length in database
+          content: content.substring(0, 1000),
           category_id: categoryData?.id,
           is_safe: analysis.isSafe,
           confidence: analysis.confidence,
@@ -228,34 +167,16 @@ serve(async (req) => {
         })
     }
 
-    // Record successful analysis metric
-    await supabase.rpc('record_performance_metric', {
-      p_metric_name: 'analysis_success',
-      p_metric_value: 1,
-      p_tags: { 
-        endpoint: 'analyze-scam', 
-        category: category || 'unknown',
-        is_safe: analysis.isSafe,
-        confidence_level: analysis.confidence > 80 ? 'high' : analysis.confidence > 60 ? 'medium' : 'low',
-        source: source
-      }
-    })
-
     return new Response(
       JSON.stringify({
         ...analysis,
-        cached: false,
-        source: source,
-        db_match: dbMatch ? {
-          confidence: dbMatch.confidence,
-          threat_level: dbMatch.threat_level,
-          source_type: dbMatch.source_type
-        } : null,
-        content_length: content.length,
-        processing_time: Date.now() - new Date().getTime()
+        source: 'api',
+        message: 'No existing reports found. Analysis performed using AI.',
+        submit_prompt: 'Help protect others by submitting this as a scam if you found it suspicious.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
+
   } catch (error) {
     console.error('Error:', error)
     
@@ -282,10 +203,58 @@ serve(async (req) => {
   }
 })
 
-async function analyzeWithAI(content: string, category: string) {
-  const openRouterKey = Deno.env.get('OPENROUTER_API_KEY')
+async function generateContentHash(content: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(content.toLowerCase().trim())
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+async function analyzeWithGemini(url: string) {
+  const genAI = new GoogleGenerativeAI(Deno.env.get('GEMINI_API_KEY') ?? '')
+  const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
+
+  const prompt = `Analyze this URL for potential phishing or scam indicators. URL: ${url}
+  Consider:
+  1. Domain age and reputation
+  2. Similar domains to legitimate sites
+  3. Common phishing patterns
+  4. SSL certificate status
+  5. Known scam patterns
   
-  if (!openRouterKey) {
+  Format your response as a JSON object with these fields:
+  {
+    isSafe: boolean,
+    confidence: number (0-100),
+    threats: string[],
+    analysis: string,
+    domainAge: string,
+    registrar: string,
+    ssl: boolean
+  }`
+
+  const result = await model.generateContent(prompt)
+  const response = await result.response
+  const text = response.text()
+  
+  try {
+    const analysis = JSON.parse(text)
+    return {
+      ...analysis,
+      category: 'URL/Domain',
+      timestamp: new Date().toISOString()
+    }
+  } catch (e) {
+    console.error('Failed to parse Gemini response:', e)
+    return await analyzeWithAI(url, 'URL/Domain')
+  }
+}
+
+async function analyzeWithAI(content: string, category: string) {
+  const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
+  
+  if (!geminiApiKey) {
     // Fallback to mock analysis if no API key
     return generateMockAnalysis(content, category)
   }
@@ -293,59 +262,64 @@ async function analyzeWithAI(content: string, category: string) {
   try {
     const startTime = Date.now()
     
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openRouterKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3.5-sonnet',
-        messages: [
-          {
-            role: 'system',
-            content: `You are a scam detection expert. Analyze the provided content and return a JSON response with:
-- isSafe: boolean (true if legitimate, false if scam)
-- confidence: number (0-100, how confident you are)
-- threats: array of detected threat types
-- analysis: string (detailed explanation)
+        contents: [{
+          parts: [{
+            text: `You are a scam detection expert specializing in Kenyan scams and fraud patterns. Analyze the provided content and return ONLY a valid JSON response with this exact structure:
+{
+  "isSafe": boolean,
+  "confidence": number (0-100),
+  "threats": ["array", "of", "threat", "types"],
+  "analysis": "detailed explanation"
+}
 
-Focus on identifying: phishing attempts, fraudulent URLs, fake offers, impersonation, crypto scams, romance scams, employment scams, tech support scams, and other common fraud patterns.`
-          },
-          {
-            role: 'user',
-            content: `Category: ${category || 'unknown'}\n\nContent to analyze:\n${content}`
-          }
-        ],
-        temperature: 0.1,
-        max_tokens: 1000,
+Focus on identifying: M-Pesa fraud, mobile money scams, fake job offers, pyramid schemes, fake investment schemes, loan app scams, SIM swap fraud, romance scams, fake goods/services, government impersonation, phishing attempts, fraudulent URLs, and other common fraud patterns in Kenya.
+
+Category: ${category || 'unknown'}
+
+Content to analyze:
+${content}`
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1000,
+        }
       }),
     })
 
     if (!response.ok) {
-      throw new Error(`OpenRouter API request failed: ${response.status}`)
+      throw new Error(`Gemini API request failed: ${response.status}`)
     }
 
     const data = await response.json()
-    const aiResponse = data.choices[0].message.content
+    const aiResponse = data.candidates[0].content.parts[0].text
     
     // Parse AI response as JSON
     try {
       const result = JSON.parse(aiResponse)
+      
+      // Validate the result structure
+      if (typeof result.isSafe !== 'boolean' || typeof result.confidence !== 'number') {
+        throw new Error('Invalid response structure')
+      }
       
       // Record AI processing time
       const processingTime = Date.now() - startTime
       console.log(`AI analysis completed in ${processingTime}ms`)
       
       return result
-    } catch {
-      // If AI didn't return valid JSON, create structured response
-      return {
-        isSafe: !aiResponse.toLowerCase().includes('scam'),
-        confidence: 75,
-        threats: aiResponse.toLowerCase().includes('scam') ? ['Potential Scam'] : [],
-        analysis: aiResponse
-      }
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError)
+      console.log('Raw AI response:', aiResponse)
+      
+      // If AI didn't return valid JSON, create structured response based on content
+      return generateMockAnalysis(content, category)
     }
   } catch (error) {
     console.error('AI analysis failed:', error)
@@ -355,28 +329,103 @@ Focus on identifying: phishing attempts, fraudulent URLs, fake offers, impersona
 
 function generateMockAnalysis(content: string, category: string) {
   const lowerContent = content.toLowerCase()
+  
+  // Kenya-specific suspicious keywords
   const suspiciousKeywords = [
-    'urgent', 'verify account', 'click here', 'suspended', 'limited time',
+    // M-Pesa and mobile money scams
+    'mpesa', 'mobile money', 'send money', 'receive money', 'verify mpesa',
+    'mpesa account suspended', 'mpesa verification', 'mpesa pin',
+    
+    // Financial scams
+    'urgent', 'verify account', 'account suspended', 'limited time',
     'congratulations', 'winner', 'prize', 'bitcoin', 'cryptocurrency',
-    'investment opportunity', 'guaranteed returns', 'act now', 'mpesa',
-    'mobile money', 'loan', 'quick cash', 'instant money'
+    'investment opportunity', 'guaranteed returns', 'act now',
+    'loan', 'quick cash', 'instant money', 'double your money',
+    
+    // Job scams
+    'work from home', 'earn money online', 'no experience needed',
+    'high paying job', 'urgent hiring', 'immediate start',
+    
+    // Tech support scams
+    'computer virus', 'system error', 'microsoft support', 'apple support',
+    'your device has been hacked', 'security alert',
+    
+    // Government impersonation
+    'kenya revenue authority', 'kra', 'government official', 'police',
+    'court summons', 'legal action', 'tax refund',
+    
+    // General scam indicators
+    'click here', 'verify now', 'confirm details', 'update information',
+    'suspended', 'blocked', 'expired', 'last chance', 'final warning'
   ]
   
   const foundKeywords = suspiciousKeywords.filter(keyword => 
     lowerContent.includes(keyword)
   )
   
+  // Category-specific analysis
+  let categoryAnalysis = ''
+  let categoryThreats = []
+  
+  switch (category) {
+    case 'phishing':
+      categoryAnalysis = 'This appears to be a phishing attempt trying to steal personal information.'
+      categoryThreats = ['Phishing', 'Data Theft']
+      break
+    case 'crypto':
+      categoryAnalysis = 'Cryptocurrency investment scams are common in Kenya. Be very cautious of guaranteed returns.'
+      categoryThreats = ['Crypto Scam', 'Investment Fraud']
+      break
+    case 'employment':
+      categoryAnalysis = 'Fake job offers often promise high pay for little work. Legitimate jobs rarely require upfront payments.'
+      categoryThreats = ['Employment Scam', 'Fake Job Offer']
+      break
+    case 'romance':
+      categoryAnalysis = 'Romance scams target vulnerable individuals. Never send money to someone you haven\'t met in person.'
+      categoryThreats = ['Romance Scam', 'Emotional Manipulation']
+      break
+    case 'tech-support':
+      categoryAnalysis = 'Tech support scams claim your device has issues to gain remote access or payment.'
+      categoryThreats = ['Tech Support Scam', 'Remote Access Fraud']
+      break
+    case 'investment':
+      categoryAnalysis = 'Investment scams promise unrealistic returns. If it sounds too good to be true, it probably is.'
+      categoryThreats = ['Investment Scam', 'Ponzi Scheme']
+      break
+    case 'shopping':
+      categoryAnalysis = 'Fake shopping sites often offer products at unrealistically low prices.'
+      categoryThreats = ['Shopping Scam', 'Fake Goods']
+      break
+    case 'social-media':
+      categoryAnalysis = 'Social media scams often involve fake profiles and urgent requests for money.'
+      categoryThreats = ['Social Media Scam', 'Fake Profile']
+      break
+    case 'government':
+      categoryAnalysis = 'Government impersonation scams claim official authority to demand payments or information.'
+      categoryThreats = ['Government Impersonation', 'Official Fraud']
+      break
+    default:
+      categoryAnalysis = 'This content requires careful analysis to determine legitimacy.'
+      categoryThreats = ['Suspicious Content']
+  }
+  
   const isSafe = foundKeywords.length === 0
   const confidence = isSafe ? 
     Math.floor(Math.random() * 20) + 70 : 
-    Math.floor(Math.random() * 30) + 70
+    Math.floor(Math.random() * 20) + 75
+  
+  const threats = foundKeywords.length > 0 ? 
+    [...categoryThreats, ...foundKeywords.slice(0, 3).map(k => k.charAt(0).toUpperCase() + k.slice(1))] : 
+    []
+  
+  const analysis = isSafe ? 
+    'Content appears legitimate with no obvious red flags detected. However, always verify information from official sources.' :
+    `${categoryAnalysis} Found concerning keywords: ${foundKeywords.slice(0, 5).join(', ')}. Exercise extreme caution.`
   
   return {
     isSafe,
     confidence,
-    threats: foundKeywords.length > 0 ? ['Suspicious Keywords', 'Potential Phishing'] : [],
-    analysis: isSafe ? 
-      'Content appears legitimate with no obvious red flags detected.' :
-      `Suspicious content detected. Found concerning keywords: ${foundKeywords.join(', ')}`
+    threats,
+    analysis
   }
 }

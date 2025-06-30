@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, Send, AlertTriangle } from 'lucide-react';
@@ -10,92 +9,45 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useScamSubmission } from '@/hooks/useScamSubmission';
+import { useScamAnalysis } from '@/hooks/useScamAnalysis';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { CredibilityScore } from '@/components/ui/credibility-score';
+import { CategorySelector } from './CategorySelector';
 
 interface ScamSubmissionFormProps {
   onSubmissionSuccess?: () => void;
 }
 
 const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuccess }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    category: '',
-    location: '',
-    contact: ''
-  });
-  
+  const [content, setContent] = useState('');
+  const [category, setCategory] = useState('');
+  const [credibilityScore, setCredibilityScore] = useState(50);
   const { toast } = useToast();
-  const { submitScamReport, isSubmitting } = useScamSubmission();
-
-  const categories = [
-    { value: 'mpesa-fraud', label: 'M-Pesa Fraud' },
-    { value: 'mobile-money', label: 'Mobile Money Scams' },
-    { value: 'fake-jobs', label: 'Fake Job Offers' },
-    { value: 'pyramid-schemes', label: 'Pyramid Schemes' },
-    { value: 'fake-investments', label: 'Fake Investment Schemes' },
-    { value: 'loan-scams', label: 'Loan App Scams' },
-    { value: 'sim-swap', label: 'SIM Swap Fraud' },
-    { value: 'romance', label: 'Romance Scams' },
-    { value: 'fake-goods', label: 'Fake Goods/Services' },
-    { value: 'government-impersonation', label: 'Government Impersonation' },
-    { value: 'other', label: 'Other' }
-  ];
-
-  const kenyanCounties = [
-    'Nairobi', 'Mombasa', 'Kiambu', 'Nakuru', 'Machakos', 'Kajiado', 'Uasin Gishu',
-    'Kakamega', 'Meru', 'Kilifi', 'Murang\'a', 'Kisumu', 'Nyeri', 'Laikipia',
-    'Garissa', 'Kericho', 'Bomet', 'Kitui', 'Makueni', 'Nyandarua', 'Kirinyaga',
-    'Embu', 'Tharaka Nithi', 'Isiolo', 'Marsabit', 'Mandera', 'Wajir', 'West Pokot',
-    'Turkana', 'Samburu', 'Trans Nzoia', 'Bungoma', 'Busia', 'Vihiga', 'Siaya',
-    'Kisii', 'Nyamira', 'Migori', 'Homa Bay', 'Narok', 'Baringo', 'Elgeyo Marakwet',
-    'Nandi', 'Kwale', 'Taita Taveta', 'Lamu', 'Tana River'
-  ].sort();
-
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+  const { submitScam, isSubmitting } = useScamSubmission();
+  const { analyzeContent, result, isAnalyzing } = useScamAnalysis();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.title || !formData.description || !formData.category) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!content.trim()) return;
 
-    try {
-      await submitScamReport(formData);
-      
-      toast({
-        title: "Report Submitted",
-        description: "Asante! Your report will help protect other Kenyans from scams.",
-      });
+    const submission = {
+      content,
+      category,
+      credibilityScore,
+      isScam: credibilityScore > 50
+    };
 
-      // Reset form
-      setFormData({
-        title: '',
-        description: '',
-        category: '',
-        location: '',
-        contact: ''
-      });
+    await submitScam(submission);
+    setContent('');
+    setCategory('');
+    setCredibilityScore(50);
+  };
 
-      if (onSubmissionSuccess) {
-        onSubmissionSuccess();
-      }
-    } catch (error) {
-      toast({
-        title: "Submission Failed",
-        description: "There was an error submitting your report. Please try again.",
-        variant: "destructive"
-      });
+  const handleAnalyze = async () => {
+    if (!content.trim()) return;
+    const result = await analyzeContent(content, category);
+    if (result) {
+      setCredibilityScore(result.confidence);
     }
   };
 
@@ -117,112 +69,87 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-slate-300">
-                Scam Title *
-              </Label>
-              <Input
-                id="title"
-                type="text"
-                placeholder="Brief title describing the scam"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                className="bg-slate-900/50 border-slate-600 text-white placeholder-slate-400 focus:border-purple-500"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-slate-300">
-                Description *
-              </Label>
+            <div className="space-y-4">
               <Textarea
-                id="description"
-                placeholder="Detailed description of the scam, including how it works and any warning signs..."
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                className="min-h-32 bg-slate-900/50 border-slate-600 text-white placeholder-slate-400 focus:border-purple-500"
-                required
+                placeholder="Paste the suspicious content, URL, or message here..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="min-h-[150px]"
               />
-            </div>
+              
+              <div className="flex gap-4">
+                <CategorySelector
+                  value={category}
+                  onChange={setCategory}
+                />
+                <Button 
+                  type="button"
+                  onClick={handleAnalyze}
+                  disabled={!content.trim() || isAnalyzing}
+                >
+                  {isAnalyzing ? 'Analyzing...' : 'Analyze'}
+                </Button>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="category" className="text-slate-300">
-                Category *
-              </Label>
-              <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                <SelectTrigger className="bg-slate-900/50 border-slate-600 text-white focus:border-purple-500">
-                  <SelectValue placeholder="Select scam category" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-600">
-                  {categories.map((category) => (
-                    <SelectItem key={category.value} value={category.value} className="text-white hover:bg-slate-700">
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {result && (
+                <Card className="p-4 space-y-4">
+                  {result.source === 'database' ? (
+                    <>
+                      <Alert>
+                        <AlertDescription>
+                          {result.message}
+                        </AlertDescription>
+                      </Alert>
+                      <CredibilityScore 
+                        value={result.confidence} 
+                        readonly 
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <Alert>
+                        <AlertDescription>
+                          {result.message}
+                          {result.submit_prompt && (
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              {result.submit_prompt}
+                            </p>
+                          )}
+                        </AlertDescription>
+                      </Alert>
+                      <CredibilityScore 
+                        value={credibilityScore}
+                        onChange={setCredibilityScore}
+                      />
+                      <Button 
+                        type="submit" 
+                        className="w-full"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? 'Submitting...' : 'Submit Report'}
+                      </Button>
+                    </>
+                  )}
+                </Card>
+              )}
 
-            <div className="space-y-2">
-              <Label htmlFor="location" className="text-slate-300 flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                County (Optional)
-              </Label>
-              <Select value={formData.location} onValueChange={(value) => handleInputChange('location', value)}>
-                <SelectTrigger className="bg-slate-900/50 border-slate-600 text-white focus:border-purple-500">
-                  <SelectValue placeholder="Select county where this scam was encountered" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-600 max-h-48">
-                  {kenyanCounties.map((county) => (
-                    <SelectItem key={county} value={county} className="text-white hover:bg-slate-700">
-                      {county}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {!result && (
+                <CredibilityScore 
+                  value={credibilityScore}
+                  onChange={setCredibilityScore}
+                />
+              )}
 
-            <div className="space-y-2">
-              <Label htmlFor="contact" className="text-slate-300">
-                Contact Information (Optional)
-              </Label>
-              <Input
-                id="contact"
-                type="text"
-                placeholder="Phone number, email, or website used by scammers"
-                value={formData.contact}
-                onChange={(e) => handleInputChange('contact', e.target.value)}
-                className="bg-slate-900/50 border-slate-600 text-white placeholder-slate-400 focus:border-purple-500"
-              />
+              {!result && (
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={!content.trim() || isSubmitting}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Report'}
+                </Button>
+              )}
             </div>
-
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white py-3 text-lg font-medium transition-all duration-200"
-              >
-                {isSubmitting ? (
-                  <motion.div
-                    className="flex items-center space-x-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                  >
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Submitting...</span>
-                  </motion.div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <Send className="h-5 w-5" />
-                    <span>Submit Report</span>
-                  </div>
-                )}
-              </Button>
-            </motion.div>
           </form>
         </CardContent>
       </Card>
