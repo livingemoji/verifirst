@@ -84,36 +84,36 @@ serve(async (req) => {
 
 async function getWeeklyTrends(supabase: any) {
   const { data: weeklyScams } = await supabase
-    .from('scam_reports')
-    .select(`
-      id,
-      content,
-      is_safe,
-      confidence,
-      threats,
-      created_at,
+      .from('scam_reports')
+      .select(`
+        id,
+        content,
+        is_safe,
+        confidence,
+        threats,
+        created_at,
       categories(name, icon)
-    `)
-    .eq('is_safe', false)
+      `)
+      .eq('is_safe', false)
     .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-    .order('created_at', { ascending: false })
-    .limit(10)
+      .order('created_at', { ascending: false })
+      .limit(10)
 
   const { data: userSubmissions } = await supabase
-    .from('user_submitted_scams')
-    .select(`
-      id,
-      title,
-      description,
-      location,
+      .from('user_submitted_scams')
+      .select(`
+        id,
+        title,
+        description,
+        location,
       status,
-      created_at,
+        created_at,
       categories(name, icon)
-    `)
-    .eq('status', 'approved')
+      `)
+      .eq('status', 'approved')
     .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-    .order('created_at', { ascending: false })
-    .limit(5)
+      .order('created_at', { ascending: false })
+      .limit(5)
 
   return {
     weekly_scams: weeklyScams || [],

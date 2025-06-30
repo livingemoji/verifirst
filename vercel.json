@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "env": {
+    "VITE_SUPABASE_URL": "https://lcbhcexhqibbooviqwdm.supabase.co",
+    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxjYmhjZXhocWliYm9vdmlxd2RtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA3OTc3NDcsImV4cCI6MjA2NjM3Mzc0N30.lii_V2RkGTPeeyoxzQGOTtL2QYzsKZ_iPg6Ux7A5jRM"
+  }
+} 

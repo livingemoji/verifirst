@@ -1,56 +1,66 @@
 import React from 'react';
-import { Slider } from "@/components/ui/slider"
-import { cn } from "@/lib/utils"
+import { cn } from '@/lib/utils';
 
 interface CredibilityScoreProps {
-  value: number;
-  onChange?: (value: number) => void;
-  readonly?: boolean;
+  score: number;
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
 }
 
-export function CredibilityScore({ value, onChange, readonly = false }: CredibilityScoreProps) {
-  const getColor = (score: number) => {
-    if (score === 50) return 'bg-blue-500'
-    if (score > 50) return 'bg-red-500'
-    return 'bg-green-500'
+const CredibilityScore: React.FC<CredibilityScoreProps> = ({
+  score,
+  size = 'medium',
+  className,
+}) => {
+  const scoreNormalized = Math.max(0, Math.min(100, score));
+  const circumference = 2 * Math.PI * 45; // r = 45
+  const offset = circumference - (scoreNormalized / 100) * circumference;
+
+  let colorClass = 'text-green-500';
+  if (scoreNormalized < 40) {
+    colorClass = 'text-red-500';
+  } else if (scoreNormalized < 70) {
+    colorClass = 'text-yellow-500';
   }
 
-  const getMessage = (score: number) => {
-    if (score === 50) return 'Neutral'
-    if (score > 50) return `${score}% Likely Scam`
-    return `${score}% Likely Safe`
-  }
+  const sizeClasses = {
+    small: { svg: 'w-16 h-16', text: 'text-lg' },
+    medium: { svg: 'w-24 h-24', text: 'text-2xl' },
+    large: { svg: 'w-32 h-32', text: 'text-4xl' },
+  };
+
+  const selectedSize = sizeClasses[size];
 
   return (
-    <div className="w-full space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Credibility Score</h4>
-        <span className={cn(
-          "px-2 py-1 rounded-full text-xs font-medium",
-          value === 50 ? "bg-blue-100 text-blue-700" :
-          value > 50 ? "bg-red-100 text-red-700" :
-          "bg-green-100 text-green-700"
-        )}>
-          {getMessage(value)}
-        </span>
-      </div>
-      <Slider
-        value={[value]}
-        min={0}
-        max={100}
-        step={1}
-        onValueChange={readonly ? undefined : (vals) => onChange?.(vals[0])}
-        className={cn(
-          "w-full",
-          getColor(value),
-          readonly && "pointer-events-none opacity-70"
-        )}
-      />
-      <div className="flex justify-between text-xs text-gray-500">
-        <span>Safe</span>
-        <span>Neutral</span>
-        <span>Scam</span>
-      </div>
+    <div className={cn('relative inline-flex items-center justify-center', selectedSize.svg, className)}>
+      <svg className="w-full h-full" viewBox="0 0 100 100">
+        <circle
+          className="text-gray-200 dark:text-gray-700"
+          strokeWidth="10"
+          stroke="currentColor"
+          fill="transparent"
+          r="45"
+          cx="50"
+          cy="50"
+        />
+        <circle
+          className={cn('transform -rotate-90 origin-center transition-all duration-500 ease-out', colorClass)}
+          strokeWidth="10"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          stroke="currentColor"
+          fill="transparent"
+          r="45"
+          cx="50"
+          cy="50"
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className={cn('absolute font-bold', colorClass, selectedSize.text)}>
+        {scoreNormalized}
+      </span>
     </div>
-  )
-} 
+  );
+};
+
+export default CredibilityScore;

@@ -403,10 +403,28 @@ async function checkPhishTank(domain: string) {
 }
 
 async function estimateDomainAge(domain: string) {
-  // This is a simplified estimation - in production you'd use WHOIS data
-  // For now, we'll use a random age between 1-1000 days
-  const ageDays = Math.floor(Math.random() * 1000) + 1
-  return { ageDays }
+  // Use a free WHOIS API for a more accurate estimation.
+  try {
+    const response = await fetch(`https://whois.toolforge.org/${domain}?format=json`);
+    if (!response.ok) {
+        console.error(`WHOIS lookup failed with status: ${response.status}`);
+        // Fallback for failed lookups: assume neutral age.
+        return { ageDays: 365 }; 
+    }
+    const data = await response.json();
+    const creationDateStr = data?.whois?.['created']?.[0];
+
+    if (creationDateStr) {
+      const creationDate = new Date(creationDateStr);
+      const ageMillis = Date.now() - creationDate.getTime();
+      const ageDays = Math.floor(ageMillis / (1000 * 60 * 60 * 24));
+      return { ageDays };
+    }
+  } catch (error) {
+    console.error('WHOIS lookup failed:', error);
+  }
+  // Fallback if API fails or data is missing
+  return { ageDays: 365 }; // Return a neutral age to avoid penalizing unfairly
 }
 
 function checkSuspiciousPatterns(domain: string) {

@@ -16,7 +16,7 @@ const Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <motion.header 
+    <motion.header
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-gradient-to-r from-slate-900 to-slate-800 text-white shadow-lg sticky top-0 z-50"
@@ -29,7 +29,7 @@ const Header = () => {
             <div>
               <h1 className="text-xl font-bold">VerifyFirst Scam Shield</h1>
               <p className="text-sm text-slate-300 hidden sm:block">Protecting Kenya from online scams</p>
-            </div>
+          </div>
           </Link>
 
           {/* Desktop Navigation */}
@@ -56,8 +56,8 @@ const Header = () => {
                 )}
               </Link>
             ))}
-          </nav>
-
+        </nav>
+        
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}

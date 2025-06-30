@@ -6,7 +6,9 @@ import { Badge } from './ui/badge'
 import { Progress } from './ui/progress'
 import { Alert, AlertDescription } from './ui/alert'
 import { useDomainAnalysis } from '../hooks/useDomainAnalysis'
-import { Shield, AlertTriangle, CheckCircle, XCircle, Clock, Globe, Server, MapPin } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle, XCircle, Clock, Globe, Server, MapPin, Info } from 'lucide-react'
+import CredibilityScore from './ui/credibility-score'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip'
 
 interface DomainAnalysisProps {
   initialDomain?: string
@@ -109,33 +111,45 @@ export function DomainAnalysis({ initialDomain, onAnalysisComplete }: DomainAnal
           {/* Trust Score Card */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Trust Score
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Trust Score
+                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="w-4 h-4 text-muted-foreground cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Based on domain age, blacklists, SSL, and other factors.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                {getTrustScoreIcon(analysis.trust_score)}
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`text-2xl font-bold ${getTrustScoreColor(analysis.trust_score)}`}>
-                      {analysis.trust_score}/100
-                    </span>
-                    <Badge variant={analysis.is_blacklisted ? 'destructive' : 'default'}>
-                      {analysis.is_blacklisted ? 'Blacklisted' : 'Safe'}
-                    </Badge>
-                  </div>
-                  <Progress value={analysis.trust_score} className="h-2" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="flex flex-col md:flex-row items-center gap-6">
+              <CredibilityScore score={analysis.trust_score} size="large" />
+              <div className="flex-1 space-y-4">
                 <div className="flex items-center gap-2">
+                  <span className="text-lg font-semibold">Threat Level:</span>
                   <Badge className={getThreatLevelColor(analysis.threat_level)}>
-                    {analysis.threat_level.toUpperCase()} THREAT
+                    {analysis.threat_level.toUpperCase()}
                   </Badge>
                 </div>
+
+                {analysis.is_blacklisted && (
+                  <div>
+                    <span className="text-lg font-semibold">Blacklist Status:</span>
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                      <Badge className="bg-red-500 text-white">Blacklisted</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        Flagged by: {analysis.blacklist_sources.join(', ')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {analysis.cached && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="w-4 h-4" />
@@ -186,7 +200,9 @@ export function DomainAnalysis({ initialDomain, onAnalysisComplete }: DomainAnal
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Domain Age:</span>
-                    <span>{analysis.domain_age_days} days</span>
+                    <span>
+                      {analysis.domain_age_days > 0 ? `${analysis.domain_age_days} days` : 'Unknown'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -232,7 +248,7 @@ export function DomainAnalysis({ initialDomain, onAnalysisComplete }: DomainAnal
               <CardContent>
                 <div className="space-y-2">
                   {analysis.blacklist_sources.map((source: string, index: number) => (
-                    <Badge key={index} variant="destructive">
+                    <Badge key={index} className="bg-red-500 text-white">
                       {source}
                     </Badge>
                   ))}

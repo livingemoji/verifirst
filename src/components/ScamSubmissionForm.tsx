@@ -89,7 +89,7 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
                 >
                   {isAnalyzing ? 'Analyzing...' : 'Analyze'}
                 </Button>
-              </div>
+            </div>
 
               {result && (
                 <Card className="p-4 space-y-4">
@@ -121,10 +121,10 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
                         value={credibilityScore}
                         onChange={setCredibilityScore}
                       />
-                      <Button 
-                        type="submit" 
+              <Button
+                type="submit"
                         className="w-full"
-                        disabled={isSubmitting}
+                disabled={isSubmitting}
                       >
                         {isSubmitting ? 'Submitting...' : 'Submit Report'}
                       </Button>
@@ -149,7 +149,7 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
                   {isSubmitting ? 'Submitting...' : 'Submit Report'}
                 </Button>
               )}
-            </div>
+                  </div>
           </form>
         </CardContent>
       </Card>

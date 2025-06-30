@@ -51,15 +51,15 @@ export const useScamAnalysis = () => {
     try {
       const analysisResult = await makeRequest(
         async () => {
-          const { data, error } = await supabase.functions.invoke('analyze-scam', {
+      const { data, error } = await supabase.functions.invoke('analyze-scam', {
             body: { 
               content, 
               category,
               files: files || []
             }
-          });
+      });
 
-          if (error) throw error;
+      if (error) throw error;
           return data;
         },
         {

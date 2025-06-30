@@ -148,23 +148,23 @@ serve(async (req) => {
 
     // Store in scam_reports
     if (userId) {
-      const { data: categoryData } = await supabase
-        .from('categories')
-        .select('id')
-        .eq('name', category)
-        .single()
+        const { data: categoryData } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('name', category)
+          .single()
 
-      await supabase
-        .from('scam_reports')
-        .insert({
+        await supabase
+          .from('scam_reports')
+          .insert({
           content: content.substring(0, 1000),
-          category_id: categoryData?.id,
-          is_safe: analysis.isSafe,
-          confidence: analysis.confidence,
-          threats: analysis.threats,
-          analysis: analysis.analysis,
+            category_id: categoryData?.id,
+            is_safe: analysis.isSafe,
+            confidence: analysis.confidence,
+            threats: analysis.threats,
+            analysis: analysis.analysis,
           user_id: userId
-        })
+          })
     }
 
     return new Response(
@@ -287,7 +287,7 @@ ${content}`
           }]
         }],
         generationConfig: {
-          temperature: 0.1,
+        temperature: 0.1,
           maxOutputTokens: 1000,
         }
       }),
