@@ -2,14 +2,12 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Mail, Phone, MapPin, Globe, Shield, Users, Building, MessageCircle, Twitter, Facebook, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Shield, Globe, Phone, Building, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const HelpCenter = () => {
   const navigate = useNavigate();
-  const [selectedAuthority, setSelectedAuthority] = useState<any>(null);
-  const [showDetails, setShowDetails] = useState(false);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const authorities = [
     {
@@ -85,8 +83,9 @@ const HelpCenter = () => {
   ];
 
   const handleCardClick = (authority: any) => {
-    setSelectedAuthority(authority);
-    setShowDetails(true);
+    // This function is no longer needed for the dialog, but kept for consistency
+    // setSelectedAuthority(authority);
+    // setShowDetails(true);
   };
 
   return (
@@ -104,7 +103,7 @@ const HelpCenter = () => {
             variant="ghost"
             className="mb-4 text-white hover:bg-white/10"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
+            <ChevronUp className="h-4 w-4 mr-2" />
             Back to Home
           </Button>
           
@@ -122,6 +121,7 @@ const HelpCenter = () => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {authorities.map((authority, index) => {
             const IconComponent = authority.icon;
+            const isExpanded = expandedIndex === index;
             return (
               <motion.div
                 key={authority.name}
@@ -131,8 +131,9 @@ const HelpCenter = () => {
                 className="h-full"
               >
                 <Card 
-                  className="bg-slate-800/50 border-slate-700/50 backdrop-blur-xl hover:bg-slate-800/70 transition-all duration-300 h-full cursor-pointer"
-                  onClick={() => handleCardClick(authority)}
+                  className={`bg-slate-800/50 border-slate-700/50 backdrop-blur-xl transition-all duration-300 h-full cursor-pointer flex flex-col justify-between ${isExpanded ? 'ring-2 ring-blue-500' : ''}`}
+                  onMouseEnter={e => e.currentTarget.classList.add('shadow-lg', 'scale-[1.02]')}
+                  onMouseLeave={e => e.currentTarget.classList.remove('shadow-lg', 'scale-[1.02]')}
                 >
                   <CardHeader>
                     <div className="flex items-center gap-3">
@@ -148,225 +149,78 @@ const HelpCenter = () => {
                     <p className="text-slate-300 text-sm flex-grow">
                       {authority.description}
                     </p>
-                    
-                    {/* Preview of contact info */}
-                    <div className="space-y-2">
-                      {authority.customerCare && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">Customer Care Available</span>
-                        </div>
-                      )}
-                      
-                      {authority.email && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Mail className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">{authority.email.length} Email(s)</span>
-                        </div>
-                      )}
-                      
-                      {authority.phone && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">Phone Available</span>
-                        </div>
-                      )}
-                      
-                      {authority.website && (
-                        <div className="flex items-center gap-2 text-sm">
-                          <Globe className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">Website Available</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    {/* View Details Button */}
                     <Button 
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4"
-                      onClick={(e) => {
+                      variant="outline"
+                      className="w-full flex items-center justify-center gap-2 bg-slate-900/30 hover:bg-blue-700/30 text-white border-blue-700/30 transition-all duration-200"
+                      onClick={e => {
                         e.stopPropagation();
-                        handleCardClick(authority);
+                        setExpandedIndex(isExpanded ? null : index);
                       }}
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      View Details
+                      {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      {isExpanded ? 'Hide Details' : 'Read More'}
                     </Button>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-4 space-y-2 text-slate-200 text-sm"
+                      >
+                        {authority.email && (
+                          <div>
+                            <span className="font-semibold">Email:</span> {authority.email.map((em: string, i: number) => (
+                              <a key={em} href={`mailto:${em}`} className="underline ml-1">{em}{i < authority.email.length - 1 ? ',' : ''}</a>
+                            ))}
+                          </div>
+                        )}
+                        {authority.phone && (
+                          <div><span className="font-semibold">Phone:</span> <a href={`tel:${authority.phone}`} className="underline ml-1">{authority.phone}</a></div>
+                        )}
+                        {authority.address && (
+                          <div><span className="font-semibold">Address:</span> <span className="ml-1">{authority.address}</span></div>
+                        )}
+                        {authority.website && (
+                          <div><span className="font-semibold">Website:</span> <a href={authority.website} target="_blank" rel="noopener noreferrer" className="underline ml-1">{authority.website}</a></div>
+                        )}
+                        {authority.customerCare && (
+                          <div>
+                            <span className="font-semibold">Customer Care:</span>
+                            <ul className="ml-4 list-disc">
+                              {Object.entries(authority.customerCare).map(([k, v]) => (
+                                <li key={k}><span className="capitalize">{k}:</span> <span className="ml-1">{v}</span></li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {authority.smsCodes && (
+                          <div>
+                            <span className="font-semibold">SMS Codes:</span>
+                            <ul className="ml-4 list-disc">
+                              {Object.entries(authority.smsCodes).map(([k, v]) => (
+                                <li key={k}><span className="capitalize">{k}:</span> <span className="ml-1">{v}</span></li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {authority.social && (
+                          <div>
+                            <span className="font-semibold">Social:</span>
+                            <ul className="ml-4 list-disc">
+                              {authority.social.twitter && <li>Twitter: <a href={`https://twitter.com/${authority.social.twitter.replace('@', '')}`} className="underline ml-1" target="_blank" rel="noopener noreferrer">{authority.social.twitter}</a></li>}
+                              {authority.social.facebook && <li>Facebook: <a href={`https://${authority.social.facebook.replace('fb.com/', 'facebook.com/')}`} className="underline ml-1" target="_blank" rel="noopener noreferrer">{authority.social.facebook}</a></li>}
+                            </ul>
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
             );
           })}
         </div>
-
-        {/* Details Dialog */}
-        <Dialog open={showDetails} onOpenChange={setShowDetails}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-slate-800/95 border-slate-700">
-            <DialogHeader>
-              <DialogTitle className="text-white text-2xl flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${selectedAuthority?.color}`}>
-                  {selectedAuthority?.icon && <selectedAuthority.icon className="h-5 w-5 text-white" />}
-                </div>
-                {selectedAuthority?.name}
-              </DialogTitle>
-            </DialogHeader>
-            
-            {selectedAuthority && (
-              <div className="space-y-6">
-                <p className="text-slate-300 text-lg">
-                  {selectedAuthority.description}
-                </p>
-                
-                {/* Customer Care Numbers */}
-                {selectedAuthority.customerCare && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-lg">
-                      <Phone className="h-5 w-5 text-slate-400" />
-                      <span className="text-slate-300 font-semibold">Customer Care (24/7):</span>
-                    </div>
-                    {selectedAuthority.customerCare.prepaid && (
-                      <div className="ml-7 text-base">
-                        <span className="text-slate-300">Prepaid: </span>
-                        <span className="text-blue-400">Dial {selectedAuthority.customerCare.prepaid}</span>
-                      </div>
-                    )}
-                    {selectedAuthority.customerCare.postpaid && (
-                      <div className="ml-7 text-base">
-                        <span className="text-slate-300">Postpaid: </span>
-                        <span className="text-blue-400">Dial {selectedAuthority.customerCare.postpaid}</span>
-                      </div>
-                    )}
-                    {selectedAuthority.customerCare.airtelLine && (
-                      <div className="ml-7 text-base">
-                        <span className="text-slate-300">From Airtel: </span>
-                        <span className="text-blue-400">Dial {selectedAuthority.customerCare.airtelLine}</span>
-                      </div>
-                    )}
-                    {selectedAuthority.customerCare.otherNetworks && (
-                      <div className="ml-7 text-base">
-                        <span className="text-slate-300">Other Networks: </span>
-                        <a href={`tel:${selectedAuthority.customerCare.otherNetworks}`} className="text-blue-400 hover:text-blue-300">
-                          {selectedAuthority.customerCare.otherNetworks}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* SMS Codes */}
-                {selectedAuthority.smsCodes && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-lg">
-                      <MessageCircle className="h-5 w-5 text-slate-400" />
-                      <span className="text-slate-300 font-semibold">SMS Short Codes:</span>
-                    </div>
-                    {selectedAuthority.smsCodes.fraud && (
-                      <div className="ml-7 text-base">
-                        <span className="text-slate-300">Fraud Reporting: </span>
-                        <span className="text-blue-400">{selectedAuthority.smsCodes.fraud}</span>
-                        <span className="text-slate-400 text-sm"> (send scammer's number & details)</span>
-                      </div>
-                    )}
-                    {selectedAuthority.smsCodes.mpesa && (
-                      <div className="ml-7 text-base">
-                        <span className="text-slate-300">M-PESA Fraud: </span>
-                        <span className="text-blue-400">{selectedAuthority.smsCodes.mpesa}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Email */}
-                {selectedAuthority.email && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-lg">
-                      <Mail className="h-5 w-5 text-slate-400" />
-                      <span className="text-slate-300 font-semibold">Email:</span>
-                    </div>
-                    {selectedAuthority.email.map((email: string, emailIndex: number) => (
-                      <a
-                        key={emailIndex}
-                        href={`mailto:${email}`}
-                        className="block text-blue-400 hover:text-blue-300 text-base ml-7"
-                      >
-                        {email}
-                      </a>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Phone */}
-                {selectedAuthority.phone && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-lg">
-                      <Phone className="h-5 w-5 text-slate-400" />
-                      <span className="text-slate-300 font-semibold">Phone:</span>
-                    </div>
-                    <a
-                      href={`tel:${selectedAuthority.phone}`}
-                      className="block text-blue-400 hover:text-blue-300 text-base ml-7"
-                    >
-                      {selectedAuthority.phone}
-                    </a>
-                  </div>
-                )}
-                
-                {/* Address */}
-                {selectedAuthority.address && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-lg">
-                      <MapPin className="h-5 w-5 text-slate-400" />
-                      <span className="text-slate-300 font-semibold">Address:</span>
-                    </div>
-                    <p className="text-slate-300 text-base ml-7">
-                      {selectedAuthority.address}
-                    </p>
-                  </div>
-                )}
-                
-                {/* Website */}
-                {selectedAuthority.website && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-lg">
-                      <Globe className="h-5 w-5 text-slate-400" />
-                      <span className="text-slate-300 font-semibold">Website:</span>
-                    </div>
-                    <a
-                      href={selectedAuthority.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-blue-400 hover:text-blue-300 text-base ml-7"
-                    >
-                      {selectedAuthority.website.replace('https://', '')}
-                    </a>
-                  </div>
-                )}
-                
-                {/* Social Media */}
-                {selectedAuthority.social && (
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-lg">
-                      <span className="text-slate-300 font-semibold">Social Media:</span>
-                    </div>
-                    <div className="ml-7 space-y-2">
-                      {selectedAuthority.social.twitter && (
-                        <div className="flex items-center gap-2 text-base">
-                          <Twitter className="h-4 w-4 text-blue-400" />
-                          <span className="text-blue-400">{selectedAuthority.social.twitter}</span>
-                        </div>
-                      )}
-                      {selectedAuthority.social.facebook && (
-                        <div className="flex items-center gap-2 text-base">
-                          <Facebook className="h-4 w-4 text-blue-600" />
-                          <span className="text-blue-400">{selectedAuthority.social.facebook}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
 
         {/* Additional Information */}
         <motion.div

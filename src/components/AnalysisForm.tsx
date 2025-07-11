@@ -96,7 +96,7 @@ const AnalysisForm = ({ onResult }) => {
               className="mt-4 sm:mt-6"
             >
               <ResultCard result={result} />
-              <KenyaAuthorities />
+              {/* KenyaAuthorities removed as per request */}
             </motion.div>
           )}
         </AnimatePresence>

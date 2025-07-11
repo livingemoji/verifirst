@@ -192,7 +192,7 @@ const ScamSubmissionForm = ({ onSubmissionSuccess }) => {
               </Button>
             </div>
           </form>
-          <KenyaAuthorities />
+          {/* KenyaAuthorities removed as per request */}
         </CardContent>
       </Card>
     </motion.div>
