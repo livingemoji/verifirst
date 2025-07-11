@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Mail, Phone, MapPin, Globe, Shield, Users, Building } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Globe, Shield, Users, Building, MessageCircle, Twitter, Facebook } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const HelpCenter = () => {
@@ -27,10 +27,43 @@ const HelpCenter = () => {
       color: 'bg-blue-500'
     },
     {
-      name: 'Safaricom / Airtel / Telkom Kenya',
-      description: 'For scams involving phone numbers, request collaboration or a data-sharing MoU for reported numbers.',
+      name: 'Safaricom PLC',
+      description: 'For scams involving Safaricom numbers, M-PESA fraud, and mobile-related scams.',
+      customerCare: {
+        prepaid: '100',
+        postpaid: '200',
+        otherNetworks: '+254 722 002 100'
+      },
+      email: ['customercare@safaricom.co.ke', 'media@safaricom.co.ke', 'legal@safaricom.co.ke'],
+      smsCodes: {
+        fraud: '333',
+        mpesa: '456'
+      },
+      address: 'Safaricom House, Waiyaki Way, Westlands, P.O. Box 66827-00800, Nairobi, Kenya',
+      website: 'https://www.safaricom.co.ke',
+      social: {
+        twitter: '@SafaricomPLC',
+        facebook: 'fb.com/SafaricomPLC'
+      },
       icon: Phone,
       color: 'bg-green-500'
+    },
+    {
+      name: 'Airtel Kenya',
+      description: 'For scams involving Airtel numbers and mobile-related fraud.',
+      customerCare: {
+        airtelLine: '100',
+        otherNetworks: '0733 100 100'
+      },
+      email: ['customerservice@ke.airtel.com', 'airtelbusiness@ke.airtel.com'],
+      address: 'Airtel Kenya Ltd, Parkside Towers, Mombasa Road, P.O. Box 73146-00200, Nairobi, Kenya',
+      website: 'https://www.airtel.co.ke',
+      social: {
+        twitter: '@Airtel_KE',
+        facebook: 'fb.com/AirtelKenya'
+      },
+      icon: Phone,
+      color: 'bg-red-600'
     },
     {
       name: 'Ethics & Anti-Corruption Commission (EACC)',
@@ -104,6 +137,66 @@ const HelpCenter = () => {
                       {authority.description}
                     </p>
                     
+                    {/* Customer Care Numbers */}
+                    {authority.customerCare && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-4 w-4 text-slate-400" />
+                          <span className="text-slate-300 font-semibold">Customer Care (24/7):</span>
+                        </div>
+                        {authority.customerCare.prepaid && (
+                          <div className="ml-6 text-sm">
+                            <span className="text-slate-300">Prepaid: </span>
+                            <span className="text-blue-400">Dial {authority.customerCare.prepaid}</span>
+                          </div>
+                        )}
+                        {authority.customerCare.postpaid && (
+                          <div className="ml-6 text-sm">
+                            <span className="text-slate-300">Postpaid: </span>
+                            <span className="text-blue-400">Dial {authority.customerCare.postpaid}</span>
+                          </div>
+                        )}
+                        {authority.customerCare.airtelLine && (
+                          <div className="ml-6 text-sm">
+                            <span className="text-slate-300">From Airtel: </span>
+                            <span className="text-blue-400">Dial {authority.customerCare.airtelLine}</span>
+                          </div>
+                        )}
+                        {authority.customerCare.otherNetworks && (
+                          <div className="ml-6 text-sm">
+                            <span className="text-slate-300">Other Networks: </span>
+                            <a href={`tel:${authority.customerCare.otherNetworks}`} className="text-blue-400 hover:text-blue-300">
+                              {authority.customerCare.otherNetworks}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* SMS Codes */}
+                    {authority.smsCodes && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <MessageCircle className="h-4 w-4 text-slate-400" />
+                          <span className="text-slate-300 font-semibold">SMS Short Codes:</span>
+                        </div>
+                        {authority.smsCodes.fraud && (
+                          <div className="ml-6 text-sm">
+                            <span className="text-slate-300">Fraud Reporting: </span>
+                            <span className="text-blue-400">{authority.smsCodes.fraud}</span>
+                            <span className="text-slate-400 text-xs"> (send scammer's number & details)</span>
+                          </div>
+                        )}
+                        {authority.smsCodes.mpesa && (
+                          <div className="ml-6 text-sm">
+                            <span className="text-slate-300">M-PESA Fraud: </span>
+                            <span className="text-blue-400">{authority.smsCodes.mpesa}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Email */}
                     {authority.email && (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
@@ -122,6 +215,7 @@ const HelpCenter = () => {
                       </div>
                     )}
                     
+                    {/* Phone */}
                     {authority.phone && (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
@@ -137,6 +231,7 @@ const HelpCenter = () => {
                       </div>
                     )}
                     
+                    {/* Address */}
                     {authority.address && (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
@@ -149,6 +244,7 @@ const HelpCenter = () => {
                       </div>
                     )}
                     
+                    {/* Website */}
                     {authority.website && (
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-sm">
@@ -163,6 +259,29 @@ const HelpCenter = () => {
                         >
                           {authority.website.replace('https://', '')}
                         </a>
+                      </div>
+                    )}
+                    
+                    {/* Social Media */}
+                    {authority.social && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-slate-300 font-semibold">Social Media:</span>
+                        </div>
+                        <div className="ml-6 space-y-1">
+                          {authority.social.twitter && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Twitter className="h-3 w-3 text-blue-400" />
+                              <span className="text-blue-400">{authority.social.twitter}</span>
+                            </div>
+                          )}
+                          {authority.social.facebook && (
+                            <div className="flex items-center gap-2 text-sm">
+                              <Facebook className="h-3 w-3 text-blue-600" />
+                              <span className="text-blue-400">{authority.social.facebook}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -189,7 +308,8 @@ const HelpCenter = () => {
                 <ul className="space-y-2 text-sm">
                   <li>• <strong>DCI Kenya:</strong> For cybercrime, online fraud, and general scam reports</li>
                   <li>• <strong>KE-CIRT:</strong> For national cyber incident response and coordination</li>
-                  <li>• <strong>Telecom Companies:</strong> For scams involving phone numbers or SMS fraud</li>
+                  <li>• <strong>Safaricom:</strong> For scams involving Safaricom numbers, M-PESA fraud, and mobile-related scams</li>
+                  <li>• <strong>Airtel:</strong> For scams involving Airtel numbers and mobile-related fraud</li>
                   <li>• <strong>EACC:</strong> For scams involving corruption, bribes, or government fraud</li>
                   <li>• <strong>ICT Authority:</strong> For digital economy related scams and policy support</li>
                 </ul>
