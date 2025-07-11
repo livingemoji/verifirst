@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Mail, Phone, MapPin, Globe, Shield, Users, Building, MessageCircle, Twitter, Facebook } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Mail, Phone, MapPin, Globe, Shield, Users, Building, MessageCircle, Twitter, Facebook, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const HelpCenter = () => {
   const navigate = useNavigate();
+  const [selectedAuthority, setSelectedAuthority] = useState<any>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
   const authorities = [
     {
@@ -81,6 +84,11 @@ const HelpCenter = () => {
     }
   ];
 
+  const handleCardClick = (authority: any) => {
+    setSelectedAuthority(authority);
+    setShowDetails(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       <div className="container mx-auto px-4 py-8">
@@ -120,8 +128,12 @@ const HelpCenter = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="h-full"
               >
-                <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-xl hover:bg-slate-800/70 transition-all duration-300">
+                <Card 
+                  className="bg-slate-800/50 border-slate-700/50 backdrop-blur-xl hover:bg-slate-800/70 transition-all duration-300 h-full cursor-pointer"
+                  onClick={() => handleCardClick(authority)}
+                >
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${authority.color}`}>
@@ -132,164 +144,229 @@ const HelpCenter = () => {
                       </CardTitle>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-slate-300 text-sm">
+                  <CardContent className="space-y-4 flex flex-col h-full">
+                    <p className="text-slate-300 text-sm flex-grow">
                       {authority.description}
                     </p>
                     
-                    {/* Customer Care Numbers */}
-                    {authority.customerCare && (
-                      <div className="space-y-2">
+                    {/* Preview of contact info */}
+                    <div className="space-y-2">
+                      {authority.customerCare && (
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300 font-semibold">Customer Care (24/7):</span>
+                          <span className="text-slate-300">Customer Care Available</span>
                         </div>
-                        {authority.customerCare.prepaid && (
-                          <div className="ml-6 text-sm">
-                            <span className="text-slate-300">Prepaid: </span>
-                            <span className="text-blue-400">Dial {authority.customerCare.prepaid}</span>
-                          </div>
-                        )}
-                        {authority.customerCare.postpaid && (
-                          <div className="ml-6 text-sm">
-                            <span className="text-slate-300">Postpaid: </span>
-                            <span className="text-blue-400">Dial {authority.customerCare.postpaid}</span>
-                          </div>
-                        )}
-                        {authority.customerCare.airtelLine && (
-                          <div className="ml-6 text-sm">
-                            <span className="text-slate-300">From Airtel: </span>
-                            <span className="text-blue-400">Dial {authority.customerCare.airtelLine}</span>
-                          </div>
-                        )}
-                        {authority.customerCare.otherNetworks && (
-                          <div className="ml-6 text-sm">
-                            <span className="text-slate-300">Other Networks: </span>
-                            <a href={`tel:${authority.customerCare.otherNetworks}`} className="text-blue-400 hover:text-blue-300">
-                              {authority.customerCare.otherNetworks}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* SMS Codes */}
-                    {authority.smsCodes && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <MessageCircle className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300 font-semibold">SMS Short Codes:</span>
-                        </div>
-                        {authority.smsCodes.fraud && (
-                          <div className="ml-6 text-sm">
-                            <span className="text-slate-300">Fraud Reporting: </span>
-                            <span className="text-blue-400">{authority.smsCodes.fraud}</span>
-                            <span className="text-slate-400 text-xs"> (send scammer's number & details)</span>
-                          </div>
-                        )}
-                        {authority.smsCodes.mpesa && (
-                          <div className="ml-6 text-sm">
-                            <span className="text-slate-300">M-PESA Fraud: </span>
-                            <span className="text-blue-400">{authority.smsCodes.mpesa}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Email */}
-                    {authority.email && (
-                      <div className="space-y-2">
+                      )}
+                      
+                      {authority.email && (
                         <div className="flex items-center gap-2 text-sm">
                           <Mail className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">Email:</span>
+                          <span className="text-slate-300">{authority.email.length} Email(s)</span>
                         </div>
-                        {authority.email.map((email, emailIndex) => (
-                          <a
-                            key={emailIndex}
-                            href={`mailto:${email}`}
-                            className="block text-blue-400 hover:text-blue-300 text-sm ml-6"
-                          >
-                            {email}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Phone */}
-                    {authority.phone && (
-                      <div className="space-y-2">
+                      )}
+                      
+                      {authority.phone && (
                         <div className="flex items-center gap-2 text-sm">
                           <Phone className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">Phone:</span>
+                          <span className="text-slate-300">Phone Available</span>
                         </div>
-                        <a
-                          href={`tel:${authority.phone}`}
-                          className="block text-blue-400 hover:text-blue-300 text-sm ml-6"
-                        >
-                          {authority.phone}
-                        </a>
-                      </div>
-                    )}
-                    
-                    {/* Address */}
-                    {authority.address && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <MapPin className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">Address:</span>
-                        </div>
-                        <p className="text-slate-300 text-sm ml-6">
-                          {authority.address}
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Website */}
-                    {authority.website && (
-                      <div className="space-y-2">
+                      )}
+                      
+                      {authority.website && (
                         <div className="flex items-center gap-2 text-sm">
                           <Globe className="h-4 w-4 text-slate-400" />
-                          <span className="text-slate-300">Website:</span>
+                          <span className="text-slate-300">Website Available</span>
                         </div>
-                        <a
-                          href={authority.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block text-blue-400 hover:text-blue-300 text-sm ml-6"
-                        >
-                          {authority.website.replace('https://', '')}
-                        </a>
-                      </div>
-                    )}
+                      )}
+                    </div>
                     
-                    {/* Social Media */}
-                    {authority.social && (
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="text-slate-300 font-semibold">Social Media:</span>
-                        </div>
-                        <div className="ml-6 space-y-1">
-                          {authority.social.twitter && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Twitter className="h-3 w-3 text-blue-400" />
-                              <span className="text-blue-400">{authority.social.twitter}</span>
-                            </div>
-                          )}
-                          {authority.social.facebook && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Facebook className="h-3 w-3 text-blue-600" />
-                              <span className="text-blue-400">{authority.social.facebook}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    {/* View Details Button */}
+                    <Button 
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCardClick(authority);
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Details
+                    </Button>
                   </CardContent>
                 </Card>
               </motion.div>
             );
           })}
         </div>
+
+        {/* Details Dialog */}
+        <Dialog open={showDetails} onOpenChange={setShowDetails}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-slate-800/95 border-slate-700">
+            <DialogHeader>
+              <DialogTitle className="text-white text-2xl flex items-center gap-3">
+                <div className={`p-2 rounded-lg ${selectedAuthority?.color}`}>
+                  {selectedAuthority?.icon && <selectedAuthority.icon className="h-5 w-5 text-white" />}
+                </div>
+                {selectedAuthority?.name}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedAuthority && (
+              <div className="space-y-6">
+                <p className="text-slate-300 text-lg">
+                  {selectedAuthority.description}
+                </p>
+                
+                {/* Customer Care Numbers */}
+                {selectedAuthority.customerCare && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-lg">
+                      <Phone className="h-5 w-5 text-slate-400" />
+                      <span className="text-slate-300 font-semibold">Customer Care (24/7):</span>
+                    </div>
+                    {selectedAuthority.customerCare.prepaid && (
+                      <div className="ml-7 text-base">
+                        <span className="text-slate-300">Prepaid: </span>
+                        <span className="text-blue-400">Dial {selectedAuthority.customerCare.prepaid}</span>
+                      </div>
+                    )}
+                    {selectedAuthority.customerCare.postpaid && (
+                      <div className="ml-7 text-base">
+                        <span className="text-slate-300">Postpaid: </span>
+                        <span className="text-blue-400">Dial {selectedAuthority.customerCare.postpaid}</span>
+                      </div>
+                    )}
+                    {selectedAuthority.customerCare.airtelLine && (
+                      <div className="ml-7 text-base">
+                        <span className="text-slate-300">From Airtel: </span>
+                        <span className="text-blue-400">Dial {selectedAuthority.customerCare.airtelLine}</span>
+                      </div>
+                    )}
+                    {selectedAuthority.customerCare.otherNetworks && (
+                      <div className="ml-7 text-base">
+                        <span className="text-slate-300">Other Networks: </span>
+                        <a href={`tel:${selectedAuthority.customerCare.otherNetworks}`} className="text-blue-400 hover:text-blue-300">
+                          {selectedAuthority.customerCare.otherNetworks}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* SMS Codes */}
+                {selectedAuthority.smsCodes && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-lg">
+                      <MessageCircle className="h-5 w-5 text-slate-400" />
+                      <span className="text-slate-300 font-semibold">SMS Short Codes:</span>
+                    </div>
+                    {selectedAuthority.smsCodes.fraud && (
+                      <div className="ml-7 text-base">
+                        <span className="text-slate-300">Fraud Reporting: </span>
+                        <span className="text-blue-400">{selectedAuthority.smsCodes.fraud}</span>
+                        <span className="text-slate-400 text-sm"> (send scammer's number & details)</span>
+                      </div>
+                    )}
+                    {selectedAuthority.smsCodes.mpesa && (
+                      <div className="ml-7 text-base">
+                        <span className="text-slate-300">M-PESA Fraud: </span>
+                        <span className="text-blue-400">{selectedAuthority.smsCodes.mpesa}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Email */}
+                {selectedAuthority.email && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-lg">
+                      <Mail className="h-5 w-5 text-slate-400" />
+                      <span className="text-slate-300 font-semibold">Email:</span>
+                    </div>
+                    {selectedAuthority.email.map((email: string, emailIndex: number) => (
+                      <a
+                        key={emailIndex}
+                        href={`mailto:${email}`}
+                        className="block text-blue-400 hover:text-blue-300 text-base ml-7"
+                      >
+                        {email}
+                      </a>
+                    ))}
+                  </div>
+                )}
+                
+                {/* Phone */}
+                {selectedAuthority.phone && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-lg">
+                      <Phone className="h-5 w-5 text-slate-400" />
+                      <span className="text-slate-300 font-semibold">Phone:</span>
+                    </div>
+                    <a
+                      href={`tel:${selectedAuthority.phone}`}
+                      className="block text-blue-400 hover:text-blue-300 text-base ml-7"
+                    >
+                      {selectedAuthority.phone}
+                    </a>
+                  </div>
+                )}
+                
+                {/* Address */}
+                {selectedAuthority.address && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-lg">
+                      <MapPin className="h-5 w-5 text-slate-400" />
+                      <span className="text-slate-300 font-semibold">Address:</span>
+                    </div>
+                    <p className="text-slate-300 text-base ml-7">
+                      {selectedAuthority.address}
+                    </p>
+                  </div>
+                )}
+                
+                {/* Website */}
+                {selectedAuthority.website && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-lg">
+                      <Globe className="h-5 w-5 text-slate-400" />
+                      <span className="text-slate-300 font-semibold">Website:</span>
+                    </div>
+                    <a
+                      href={selectedAuthority.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-blue-400 hover:text-blue-300 text-base ml-7"
+                    >
+                      {selectedAuthority.website.replace('https://', '')}
+                    </a>
+                  </div>
+                )}
+                
+                {/* Social Media */}
+                {selectedAuthority.social && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-lg">
+                      <span className="text-slate-300 font-semibold">Social Media:</span>
+                    </div>
+                    <div className="ml-7 space-y-2">
+                      {selectedAuthority.social.twitter && (
+                        <div className="flex items-center gap-2 text-base">
+                          <Twitter className="h-4 w-4 text-blue-400" />
+                          <span className="text-blue-400">{selectedAuthority.social.twitter}</span>
+                        </div>
+                      )}
+                      {selectedAuthority.social.facebook && (
+                        <div className="flex items-center gap-2 text-base">
+                          <Facebook className="h-4 w-4 text-blue-600" />
+                          <span className="text-blue-400">{selectedAuthority.social.facebook}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Additional Information */}
         <motion.div
