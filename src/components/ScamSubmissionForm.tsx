@@ -13,6 +13,7 @@ import { useScamAnalysis } from '@/hooks/useScamAnalysis';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CredibilityScore } from '@/components/ui/credibility-score';
 import { CategorySelector } from './CategorySelector';
+import KenyaAuthorities from './KenyaAuthorities';
 
 interface ScamSubmissionFormProps {
   onSubmissionSuccess?: () => void;
@@ -151,6 +152,7 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
               )}
                   </div>
           </form>
+          <KenyaAuthorities />
         </CardContent>
       </Card>
     </motion.div>

@@ -8,6 +8,7 @@ import CategorySelector from './CategorySelector';
 import FileUploader from './FileUploader';
 import ResultCard from './ResultCard';
 import { useScamAnalysis } from '@/hooks/useScamAnalysis';
+import KenyaAuthorities from './KenyaAuthorities';
 
 const AnalysisForm = ({ onResult }) => {
   const [input, setInput] = useState('');
@@ -95,6 +96,7 @@ const AnalysisForm = ({ onResult }) => {
               className="mt-4 sm:mt-6"
             >
               <ResultCard result={result} />
+              <KenyaAuthorities />
             </motion.div>
           )}
         </AnimatePresence>
