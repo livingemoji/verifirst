@@ -11,8 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useScamSubmission } from '@/hooks/useScamSubmission';
 import { useScamAnalysis } from '@/hooks/useScamAnalysis';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CredibilityScore } from '@/components/ui/credibility-score';
-import { CategorySelector } from './CategorySelector';
+import CredibilityScore from '@/components/ui/credibility-score';
+import CategorySelector from './CategorySelector';
 import KenyaAuthorities from './KenyaAuthorities';
 
 interface ScamSubmissionFormProps {

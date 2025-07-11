@@ -10,7 +10,8 @@ const Header = () => {
   const navItems = [
     { path: '/', label: 'Home', description: 'Analyze & Submit' },
     { path: '/trends', label: 'Trending Scams', description: 'Weekly Reports' },
-    { path: '/analytics', label: 'Analytics', description: 'Heatmap & Activity' }
+    { path: '/analytics', label: 'Analytics', description: 'Heatmap & Activity' },
+    { path: '/help', label: 'Help Center', description: 'Contact Authorities' }
   ];
 
   const isActive = (path: string) => location.pathname === path;

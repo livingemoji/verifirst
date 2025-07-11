@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Zap, TrendingUp } from 'lucide-react';
+import { Shield, Zap, TrendingUp, HelpCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const HeroSection = () => {
   return (
@@ -25,7 +27,7 @@ const HeroSection = () => {
             and emails instantly with our advanced detection system.
           </p>
           
-          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4 sm:gap-6 text-sm text-slate-400 px-4">
+          <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-4 sm:gap-6 text-sm text-slate-400 px-4 mb-8">
             <motion.div
               className="flex items-center justify-center space-x-2"
               whileHover={{ scale: 1.05 }}
@@ -51,6 +53,20 @@ const HeroSection = () => {
               <span>Community Verified</span>
             </motion.div>
           </div>
+
+          {/* Help Center Button */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <Link to="/help">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl">
+                <HelpCircle className="h-5 w-5 mr-2" />
+                Contact Authorities
+              </Button>
+            </Link>
+          </motion.div>
         </motion.div>
       </div>
     </section>
