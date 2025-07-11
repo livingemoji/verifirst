@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Send, AlertTriangle } from 'lucide-react';
+import { MapPin, Send, AlertTriangle, UploadCloud, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useScamSubmission } from '@/hooks/useScamSubmission';
 import { useScamAnalysis } from '@/hooks/useScamAnalysis';
@@ -15,32 +14,53 @@ import CredibilityScore from '@/components/ui/credibility-score';
 import CategorySelector from './CategorySelector';
 import KenyaAuthorities from './KenyaAuthorities';
 
-interface ScamSubmissionFormProps {
-  onSubmissionSuccess?: () => void;
-}
-
-const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuccess }) => {
+const ScamSubmissionForm = ({ onSubmissionSuccess }) => {
+  const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('');
+  const [location, setLocation] = useState('');
+  const [scammerContact, setScammerContact] = useState('');
+  const [files, setFiles] = useState([]);
   const [credibilityScore, setCredibilityScore] = useState(50);
   const { toast } = useToast();
   const { submitScam, isSubmitting } = useScamSubmission();
   const { analyzeContent, result, isAnalyzing } = useScamAnalysis();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Drag-and-drop handlers
+  const handleDrop = (e) => {
     e.preventDefault();
-    if (!content.trim()) return;
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles((prev) => [...prev, ...droppedFiles]);
+  };
+  const handleDragOver = (e) => e.preventDefault();
 
+  const handleFileChange = (e) => {
+    setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+  };
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title.trim() || !content.trim() || !category.trim()) return;
     const submission = {
+      title,
       content,
       category,
+      location,
+      scammerContact,
       credibilityScore,
-      isScam: credibilityScore > 50
+      isScam: credibilityScore > 50,
+      files
     };
-
     await submitScam(submission);
+    setTitle('');
     setContent('');
     setCategory('');
+    setLocation('');
+    setScammerContact('');
+    setFiles([]);
     setCredibilityScore(50);
   };
 
@@ -71,18 +91,90 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
+              <Label htmlFor="scam-title" className="text-white">Scam Title</Label>
+              <Input
+                id="scam-title"
+                placeholder="e.g. Fake KPLC Customer Care"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="bg-slate-900/50 border-slate-600 text-white"
+                required
+              />
+              <Label htmlFor="scam-content" className="text-white">Scam Description</Label>
               <Textarea
+                id="scam-content"
                 placeholder="Paste the suspicious content, URL, or message here..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="min-h-[150px]"
+                className="min-h-[150px] bg-slate-900/50 border-slate-600 text-white"
+                required
               />
-              
-              <div className="flex gap-4">
-                <CategorySelector
-                  value={category}
-                  onChange={setCategory}
+              <div className="flex gap-4 flex-wrap">
+                <div className="flex-1 min-w-[200px]">
+                  <Label htmlFor="category" className="text-white">Category</Label>
+                  <CategorySelector value={category} onChange={setCategory} />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <Label htmlFor="location" className="text-white">Location</Label>
+                  <Input
+                    id="location"
+                    placeholder="e.g. Nairobi, Mombasa, Online"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="bg-slate-900/50 border-slate-600 text-white"
+                  />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <Label htmlFor="scammer-contact" className="text-white">Scammer Contact/Identifier</Label>
+                  <Input
+                    id="scammer-contact"
+                    placeholder="e.g. 0712xxxxxx, scammer@gmail.com, scamwebsite.com"
+                    value={scammerContact}
+                    onChange={(e) => setScammerContact(e.target.value)}
+                    className="bg-slate-900/50 border-slate-600 text-white"
+                  />
+                </div>
+              </div>
+              {/* Drag-and-drop file uploader */}
+              <div
+                className="border-2 border-dashed border-slate-600 rounded-lg p-4 bg-slate-900/40 text-white text-center cursor-pointer hover:bg-slate-800/60 transition-all"
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+              >
+                <UploadCloud className="mx-auto mb-2 h-8 w-8 text-blue-400" />
+                <p className="mb-2">Drag & drop images/screenshots here, or click to select files</p>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  id="file-upload"
+                  onChange={handleFileChange}
                 />
+                <label htmlFor="file-upload" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-white cursor-pointer mt-2">Select Files</label>
+                {files.length > 0 && (
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {files.map((file, idx) => (
+                      <div key={idx} className="relative group">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`upload-preview-${idx}`}
+                          className="w-full h-24 object-cover rounded border border-slate-700"
+                        />
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 text-xs opacity-80 group-hover:opacity-100"
+                          onClick={() => removeFile(idx)}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-4 items-center">
+                <CredibilityScore value={credibilityScore} onChange={setCredibilityScore} />
                 <Button 
                   type="button"
                   onClick={handleAnalyze}
@@ -90,67 +182,15 @@ const ScamSubmissionForm: React.FC<ScamSubmissionFormProps> = ({ onSubmissionSuc
                 >
                   {isAnalyzing ? 'Analyzing...' : 'Analyze'}
                 </Button>
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={!title.trim() || !content.trim() || !category.trim() || isSubmitting}
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Report'}
+              </Button>
             </div>
-
-              {result && (
-                <Card className="p-4 space-y-4">
-                  {result.source === 'database' ? (
-                    <>
-                      <Alert>
-                        <AlertDescription>
-                          {result.message}
-                        </AlertDescription>
-                      </Alert>
-                      <CredibilityScore 
-                        value={result.confidence} 
-                        readonly 
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <Alert>
-                        <AlertDescription>
-                          {result.message}
-                          {result.submit_prompt && (
-                            <p className="mt-2 text-sm text-muted-foreground">
-                              {result.submit_prompt}
-                            </p>
-                          )}
-                        </AlertDescription>
-                      </Alert>
-                      <CredibilityScore 
-                        value={credibilityScore}
-                        onChange={setCredibilityScore}
-                      />
-              <Button
-                type="submit"
-                        className="w-full"
-                disabled={isSubmitting}
-                      >
-                        {isSubmitting ? 'Submitting...' : 'Submit Report'}
-                      </Button>
-                    </>
-                  )}
-                </Card>
-              )}
-
-              {!result && (
-                <CredibilityScore 
-                  value={credibilityScore}
-                  onChange={setCredibilityScore}
-                />
-              )}
-
-              {!result && (
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={!content.trim() || isSubmitting}
-                >
-                  {isSubmitting ? 'Submitting...' : 'Submit Report'}
-                </Button>
-              )}
-                  </div>
           </form>
           <KenyaAuthorities />
         </CardContent>
