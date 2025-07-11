@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Map, Activity, Globe, TrendingUp } from 'lucide-react';
+import { Map, Activity, Globe, TrendingUp, Upload, AlertCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import ScamHeatmap from '@/components/ScamHeatmap';
 import Footer from '@/components/Footer';
@@ -29,6 +29,7 @@ const Analytics = () => {
     detectionRate: 0
   });
   const [loading, setLoading] = useState(true);
+  const [hasData, setHasData] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,24 +58,26 @@ const Analytics = () => {
           const statsData = await statsResponse.json();
           const stats = statsData.statistics || {};
           
+          const totalAnalyses = stats.totalReports || 0;
+          const activeHotspots = Math.floor((stats.scamCount || 0) / 10);
+          const regionsCovered = totalAnalyses > 0 ? 47 : 0; // Only show regions if there's data
+          const detectionRate = totalAnalyses > 0 ? Math.round((stats.highConfidence / totalAnalyses) * 100) : 0;
+          
           setAnalyticsData({
-            totalAnalyses: stats.totalReports || 0,
-            activeHotspots: Math.floor((stats.scamCount || 0) / 10), // Estimate hotspots
-            regionsCovered: 47, // Fixed for Kenya
-            detectionRate: stats.totalReports > 0 ? Math.round((stats.highConfidence / stats.totalReports) * 100) : 0
+            totalAnalyses,
+            activeHotspots,
+            regionsCovered,
+            detectionRate
           });
+
+          // Check if we have any real data
+          if (totalAnalyses > 0 || transformedActivity.length > 0) {
+            setHasData(true);
+          }
         }
 
-        // Generate regional stats (mock data for now, can be enhanced with real location data)
-        const mockRegionalStats = [
-          { region: 'Nairobi', reports: Math.floor(Math.random() * 500) + 300, risk: 'High', trend: '+12%' },
-          { region: 'Mombasa', reports: Math.floor(Math.random() * 300) + 200, risk: 'Medium', trend: '+8%' },
-          { region: 'Kisumu', reports: Math.floor(Math.random() * 200) + 100, risk: 'Medium', trend: '+5%' },
-          { region: 'Nakuru', reports: Math.floor(Math.random() * 150) + 50, risk: 'Low', trend: '+3%' },
-          { region: 'Eldoret', reports: Math.floor(Math.random() * 100) + 50, risk: 'Low', trend: '+2%' },
-          { region: 'Thika', reports: Math.floor(Math.random() * 80) + 30, risk: 'Low', trend: '+1%' },
-        ];
-        setRegionalStats(mockRegionalStats);
+        // Remove dummy regional stats - only show real data when available
+        setRegionalStats([]);
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -205,7 +208,11 @@ const Analytics = () => {
                   ))
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-slate-400">No recent activity to display</p>
+                    <div className="flex flex-col items-center gap-4">
+                      <AlertCircle className="h-12 w-12 text-slate-400" />
+                      <p className="text-slate-400 text-lg">No recent activity to display</p>
+                      <p className="text-slate-500 text-sm">Start analyzing content to see live activity</p>
+                    </div>
                   </div>
                 )}
               </div>
@@ -298,7 +305,7 @@ const Analytics = () => {
                       <div className="h-4 bg-slate-600 rounded"></div>
                     </div>
                   ))
-                ) : (
+                ) : regionalStats.length > 0 ? (
                   regionalStats.map((stat, index) => (
                     <motion.div
                       key={index}
@@ -322,6 +329,17 @@ const Analytics = () => {
                       <div className="text-xs text-green-400 mt-2">{stat.trend} from last week</div>
                     </motion.div>
                   ))
+                ) : (
+                  <div className="col-span-full text-center py-12">
+                    <div className="flex flex-col items-center gap-4">
+                      <Upload className="h-16 w-16 text-slate-400" />
+                      <h3 className="text-xl font-semibold text-white">No Regional Data Available</h3>
+                      <p className="text-slate-400 max-w-md">
+                        Regional statistics will appear here once scam reports with location data are submitted.
+                        Start by analyzing content or submitting scam reports to see regional breakdowns.
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
             </motion.div>
